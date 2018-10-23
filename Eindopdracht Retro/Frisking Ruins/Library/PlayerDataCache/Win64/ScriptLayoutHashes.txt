@@ -1,6 +1,6 @@
 WindowsStandalone
 PlayerPath?
-C:/Users/phuck/Desktop/Game Creation/Games/Unity Games/Frisking Ruins/Builds/Pactris.exe
+C:/Users/phuck/Desktop/Game Creation/Games/Unity Games/Frisking Ruins/Build/Frisking Ruins.exe
 SceneListBegin?
 Assets/Main.unity
 SceneListEnd?
@@ -130,7 +130,7 @@ fc061f3ae8a876c0687e86378d4a447c UnityEngine.Networking.dll:UnityEngine.Networki
 8b70c1484b9c43ca53aaa6ae7e67b20b Assembly-CSharp.dll:ProceduralToolkit.Examples.Buildings.BuildingGeneratorReuse
 0a006f3734181ba8b26758f0866152c0 UnityEngine.SpatialTracking.dll:UnityEngine.SpatialTracking.TrackedPoseDriver
 eb5c45035021b27a51083d2c6446409d Assembly-CSharp.dll:ProceduralToolkit.Examples.CameraRotator
-8815fb0b6ed15436bae6fb03f0e87d34 Assembly-CSharp.dll:.Player
+0420995a7ba2316479156efa261ef86d Assembly-CSharp.dll:.Player
 0a54a495eeaccdec83dfd2386a441e2e Assembly-CSharp.dll:ProceduralToolkit.Examples.TessellatorExample
 2115d81545998ed96de7abec122f11a7 Assembly-CSharp.dll:ProceduralToolkit.Examples.BreakoutConfigurator
 201854fe537bdba251bb638094b26fbf Assembly-CSharp.dll:ProceduralToolkit.Examples.Primitives.Pyramid
@@ -143,7 +143,7 @@ e1ea12ca952c81d81a9a21fdf34446ed UnityEngine.HoloLens.dll:UnityEngine.EventSyste
 dfd33ff9ae3ce8d7ca1f22b475ec2387 UnityEngine.HoloLens.dll:UnityEngine.XR.WSA.SpatialMappingRenderer
 96f3ea9f23b6f08e60710ebb4af49174 Unity.TextMeshPro.dll:TMPro.TMP_SpriteAsset
 f0d4105ad812a7f70017697d08f05e52 Assembly-CSharp.dll:.PostProcessing_Sobel
-a9d59bc2c860eac021732988454b47f2 Assembly-CSharp.dll:Retro.Entity
+371432c5b6828124e08dce15fdff0c1e Assembly-CSharp.dll:Retro.Entity
 486cd95c82d8305219c352c06b776e1f Assembly-CSharp.dll:ProceduralToolkit.Examples.Drawer
 f16835701e71dd5d6fb1fed4b7aff1d8 Unity.TextMeshPro.dll:TMPro.TMP_Asset
 04460ee87270d98c68ec1c718ccab6ee Assembly-CSharp.dll:ProceduralToolkit.Examples.Primitives.Dodecahedron
@@ -186,7 +186,7 @@ e033f131358cea5a0eabf9561e781deb UnityEngine.TestRunner.dll:UnityEngine.TestTool
 70f7dc248db3379548a88e8d4fa049f8 UnityEngine.GoogleAudioSpatializer.dll:UnityEngine.Experimental.Audio.Google.GvrAudioRoom
 28a95668dd28649297d595834fe8417e UnityEngine.GoogleAudioSpatializer.dll:UnityEngine.Experimental.Audio.Google.GvrAudioSoundfieldExtension
 28a95668dd28649297d595834fe8417e UnityEngine.GoogleAudioSpatializer.dll:UnityEngine.Experimental.Audio.Google.GvrAudioSourceExtension
-a9d59bc2c860eac021732988454b47f2 Assembly-CSharp.dll:.DeathWorm
+371432c5b6828124e08dce15fdff0c1e Assembly-CSharp.dll:.DeathWorm
 1a90b221dc803408fbafa883c12bcab4 UnityEngine.GoogleAudioSpatializer.dll:UnityEngine.Experimental.Audio.Google.GvrAudioListenerExtension
 70f7dc248db3379548a88e8d4fa049f8 UnityEngine.GoogleAudioSpatializer.dll:UnityEngine.Experimental.Audio.Google.GvrAudioRoom
 28a95668dd28649297d595834fe8417e UnityEngine.GoogleAudioSpatializer.dll:UnityEngine.Experimental.Audio.Google.GvrAudioSoundfieldExtension

@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEditor;
 
-//DJ Beathoven & MC Trucifer
+//DJ Beathoven & MC Truecifer
 public class Inventory : MonoBehaviour {
 	[HideInInspector]
 	public Item[] items;
@@ -118,7 +118,9 @@ public class Inventory : MonoBehaviour {
 			itm.GetComponent<Image>().sprite = cellItems[i].getTexture();
 			itm.transform.localPosition = new Vector3(0.2f, 0.1f, 0);
 			itm.GetComponent<RectTransform>().sizeDelta = new Vector2(5, 5);
-			itm.transform.localScale = new Vector3(1.3f, 1.1f, 1);
+			itm.transform.localScale = new Vector3(0.6f, 0.6f, 0.6f);
+			itm.GetComponent<RectTransform>().anchorMin = new Vector2(0, 0);
+			itm.GetComponent<RectTransform>().anchorMax = new Vector2(1, 1);
 		}
 		//Buckle (Selection)
 		buckle = new GameObject("Belt Buckle");
@@ -162,10 +164,6 @@ public class Inventory : MonoBehaviour {
 		SoundManager.PLAY_STATIONARY_SOUND("BeltSwitch");
 	}
 
-	public void setItem(int slot, int itemID) {
-		cellItems[slot] = items[itemID];
-		highlight = -1;
-	}
 	public void setItem(int slot, string itemName) {
 		foreach(Item i in items) if(i.itemName.ToLower() == itemName.ToLower()) {
 			cellItems[slot] = i;
@@ -248,8 +246,8 @@ public class Inventory : MonoBehaviour {
 
 			//Crafting slots transparancy when (itemID == 0)
 			for(int i = 0; i < slots.Length; i++) {
-				if(slots[i].item.ID == 0) slots[i].transform.GetChild(2).GetComponent<Image>().color = new Color(slots[i].GetComponent<Image>().color.r, slots[i].GetComponent<Image>().color.g, slots[i].GetComponent<Image>().color.b, 0);
-				else slots[i].transform.GetChild(2).GetComponent<Image>().color = new Color(slots[i].GetComponent<Image>().color.r, slots[i].GetComponent<Image>().color.g, slots[i].GetComponent<Image>().color.b, 1);
+				if(slots[i].item.ID == 0) slots[i].setTransparant(true);
+				else slots[i].setTransparant(false);//slots[i].transform.GetChild(1).GetComponent<Image>().color = new Color(slots[i].GetComponent<Image>().color.r, slots[i].GetComponent<Image>().color.g, slots[i].GetComponent<Image>().color.b, 1);
 			}
 
 			if(!CanSelect()) CalculateCraftingRecipe();
@@ -279,7 +277,7 @@ public class Inventory : MonoBehaviour {
 			isCrafting = true;
 			yield return new WaitForSeconds(0.2f);
 			for(int i = 0; i < slotsToWipe.Length; i++) removeItem(slotsToWipe[i]);
-			inventory.setItem(inventory.GetEmptySlot(recipe.result)[0], recipe.result.ID);
+			inventory.setItem(inventory.GetEmptySlot(recipe.result)[0], recipe.result.getName());
 
 			GameObject obj = Instantiate(splashTextPrefab);
 			obj.name = "Splash Text";

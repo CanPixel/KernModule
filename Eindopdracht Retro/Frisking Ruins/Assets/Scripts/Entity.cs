@@ -52,6 +52,7 @@ namespace Retro {
 
 		public bool glueToGround = true;
 		public bool destroyOnKill = false;
+		public bool spawnScale = true;
 
 		//Spawning animation
 		private Vector3 baseScale;
@@ -62,7 +63,7 @@ namespace Retro {
 			if(transform.Find("Sprite") != null) texture = transform.Find("Sprite").GetComponent<SpriteRenderer>();
 			meshParticle = GetComponent<MeshRenderer>();
 			baseScale = transform.localScale;
-			transform.localScale = new Vector3(0, 0, 0);
+			if(spawnScale) transform.localScale = new Vector3(0, 0, 0);
 		}
 
 		public void Damage(float damage, float knockback, Transform source, string hitSound = "") {
@@ -103,7 +104,7 @@ namespace Retro {
 			if(glueToGround) transform.position = new Vector3(transform.position.x, -0.5f, transform.position.z);
 
 			//Spawning animation
-			transform.localScale = new Vector3(Mathf.Lerp(transform.localScale.x, baseScale.x, Time.deltaTime * 1), Mathf.Lerp(transform.localScale.y, baseScale.y, Time.deltaTime * 1), Mathf.Lerp(transform.localScale.z, baseScale.z, Time.deltaTime * 1));
+			if(spawnScale) transform.localScale = new Vector3(Mathf.Lerp(transform.localScale.x, baseScale.x, Time.deltaTime * 1), Mathf.Lerp(transform.localScale.y, baseScale.y, Time.deltaTime * 1), Mathf.Lerp(transform.localScale.z, baseScale.z, Time.deltaTime * 1));
 
 			//Damage Delay + Texture Flickering
 			if(damagedTick > 0) damagedTick -= 0.25f;
@@ -167,11 +168,13 @@ namespace Retro {
 
 		protected void walk() {
 			walkSound();
-			if(meshParticle != null) walkParticle();
+
+			//LAGS!!
+			//if(meshParticle != null) walkParticle();
 		}
 
 		protected virtual void walkParticle() {
-			for(int i = 0; i < 3; i++) {
+			for(int i = 0; i < 2; i++) {
 				GameObject part = ParticleSpawner.SPAWN(new Color(0.6f, 0.6f, 0.6f), transform.position + new Vector3(0, 0.9f, -0.8f), Quaternion.identity, Random.Range(0.05f, 0.3f));
 				part.GetComponent<Particle>().upForce = 0.2f;
 				part.GetComponent<Particle>().sideForce = 0;

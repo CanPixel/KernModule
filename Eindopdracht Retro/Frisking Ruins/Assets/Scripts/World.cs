@@ -149,9 +149,7 @@ public class World : MonoBehaviour {
 		planes[3].distance += 16;
 		foreach(GameObject obj in cullingObjects) {
 			if(obj == null || obj.GetComponent<Collider>() == null) continue;
-			if(GeometryUtility.TestPlanesAABB(planes, obj.GetComponent<Collider>().bounds) && !player.GetComponent<Player>().InDungeon()) {
-				obj.SetActive(true);
-			}
+			if(GeometryUtility.TestPlanesAABB(planes, obj.GetComponent<Collider>().bounds) && player.GetComponent<Player>() != null && !player.GetComponent<Player>().InDungeon()) obj.SetActive(true);
 			else obj.SetActive(false);
 		}
 	}
@@ -180,8 +178,8 @@ public class World : MonoBehaviour {
 				}
 
 		//Borders
-		for(int l = 0; l < 2; l++) for(int x = 0; x < width; x++) for(int m = 0; m < 5; m++) GenCube(cacti, x, l*height+(m*2-1), true);
-		for(int l = 0; l < 2; l++) for(int x = 0; x < height; x++) for(int m = 0; m < 5; m++) GenCube(cacti, l*width+(m*2-1), x, true);
+		for(int l = 0; l < 2; l++) for(int x = 0; x < width; x++) for(int m = 0; m < 2; m++) GenCube(cacti, x, l*height+(m*2-1), true);
+		for(int l = 0; l < 2; l++) for(int x = 0; x < height; x++) for(int m = 0; m < 2; m++) GenCube(cacti, l*width+(m*2-1), x, true);
 		int totalW = width*(sizeNeeded+1);
 		int totalH = height*(sizeNeeded+1);
 
@@ -491,13 +489,13 @@ public class World : MonoBehaviour {
 		}
 
 		private void tetrisTick() {
-			if(cleared) return;
+			if(cleared || !active) return;
 			if(dungeonTimer < dungeonWinTime) {
 				//Tiles
 				if(Random.Range(0, 100) < 10) {
 					int x = Random.Range(0, W);
 					EntityOfLife life = EntityOfLife.ENTITIES_TETRIS[Random.Range(0, EntityOfLife.ENTITIES_TETRIS.Length)];
-					if(Random.Range(0, 100) > life.rarity) placeEntity(x, H - 3, life);
+					if(Random.Range(0, 100) > life.rarity) PlaceEntity(x, H - 3, life);
 				}
 			}
 
@@ -516,20 +514,20 @@ public class World : MonoBehaviour {
 		}
 
 		private void gameOfLifeTick() {
-			if(cleared) return;
+			if(cleared || !active) return;
 			if(dungeonTimer < dungeonWinTime) {
 				//Corners
 				if(Random.Range(0, 100) < 5) {
 					for(int i = 0; i < 12; i++) {
 						EntityOfLife life = EntityOfLife.ENTITIES_OF_LIFE[Random.Range(0, EntityOfLife.ENTITIES_OF_LIFE.Length)];
-						if(Random.Range(0, 100) > life.rarity) placeEntity((W/2)*((i%2)+1) - (W/4), (H/2)*((i%2)+1) - (H/4), life);
+						if(Random.Range(0, 100) > life.rarity) PlaceEntity((W/2)*((i%2)+1) - (W/4), (H/2)*((i%2)+1) - (H/4), life);
 					}
 				}
 				//Center
 				if(spawnDelay <= 0) {
 					for(int i = 0; i < 3; i++) { 
 						EntityOfLife life = EntityOfLife.ENTITIES_OF_LIFE[Random.Range(0, EntityOfLife.ENTITIES_OF_LIFE.Length)];
-						 if(Random.Range(0, 100) > life.rarity) placeEntity((W/2)*((i%2)+1), H/2, life);
+						 if(Random.Range(0, 100) > life.rarity) PlaceEntity((W/2)*((i%2)+1), H/2, life);
 						else 
 						{
 							i--;
@@ -540,7 +538,7 @@ public class World : MonoBehaviour {
 				}
 				//Gliders
 				if(Random.Range(0, 100) < 10 && (int)Time.time % 2 == 0 && gliderDelay <= 0){
-					 for(int i = 0; i < 2; i++) placeEntity((W/2)*((i%2)+1) - (W/4), (H/2)*((i%2)+1) - (H/4), EntityOfLife.ENTITIES_OF_LIFE[0], (i == 1));
+					 for(int i = 0; i < 2; i++) PlaceEntity((W/2)*((i%2)+1) - (W/4), (H/2)*((i%2)+1) - (H/4), EntityOfLife.ENTITIES_OF_LIFE[0], (i == 1));
 					gliderDelay = 1;
 				}
 			}
@@ -559,10 +557,14 @@ public class World : MonoBehaviour {
 			}
 		}
 
-		private void placeEntity(int x, int y, EntityOfLife ent) {
-			placeEntity(x, y, ent, false);
+		public bool IsActive() {
+			return active;
 		}
-		private void placeEntity(int x, int y, EntityOfLife ent, bool flip) {
+
+		private void PlaceEntity(int x, int y, EntityOfLife ent) {
+			PlaceEntity(x, y, ent, false);
+		}
+		private void PlaceEntity(int x, int y, EntityOfLife ent, bool flip) {
 			int[,] entit = ent.shape;
 			if(flip) entit = ent.GetFlippedShape();
 			try {
@@ -602,7 +604,7 @@ public class World : MonoBehaviour {
 		}
 
 		void FixedUpdate() {
-			if(cleared) return;
+			if(cleared || !active) return;
 
 			if(spawnDelay > 0) spawnDelay += Time.deltaTime;
 			if(spawnDelay > 1) spawnDelay = 0;

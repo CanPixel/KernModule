@@ -22,12 +22,15 @@ public class CraftingSlot : MonoBehaviour {
 		private set;
 	}
 
+	private Image image;
+
 	void Awake() {
 		select = Instantiate(selectPrefab, new Vector3(0, 0, 0), Quaternion.identity);
 		select.transform.SetParent(transform);
 		select.transform.localPosition = new Vector3(0, 0, 0);
 		select.transform.localScale = new Vector3(1.5f, 1.5f, 1.5f);
 		select.name = "Select";
+		image = GetComponent<Image>();
 	}
 
 	void Update() {
@@ -98,5 +101,9 @@ public class CraftingSlot : MonoBehaviour {
 	public void setSelect(bool i) {
 		selected = i;
 		SoundManager.PLAY_STATIONARY_SOUND("Hit");
+	}
+
+	public void setTransparant(bool i) {
+		itemOBJ.GetComponent<Image>().color = new Color(image.color.r, image.color.g, image.color.b, (i)?0:1);
 	}
 }

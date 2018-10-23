@@ -140,3 +140,4 @@ MonoBehaviour:
   hurtSoundName: Cut
   glueToGround: 0
   destroyOnKill: 1
+  spawnScale: 1

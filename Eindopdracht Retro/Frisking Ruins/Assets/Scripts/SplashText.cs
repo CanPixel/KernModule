@@ -33,6 +33,7 @@ public class SplashText : MonoBehaviour {
 	}
 
 	public void setText(string txt) {
+		if(text == null) return;
 		text.text = txt;
 		shadow.text = txt;
 	}

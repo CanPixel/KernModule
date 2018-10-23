@@ -30,6 +30,7 @@ public class Player : Retro.Entity {
 
 		//Base items
 		inventory.setItem(0, "SWORD");
+		inventory.setItem(1, "BANDAGE");
 	}
 
 	void Update () {
@@ -137,7 +138,13 @@ public class Player : Retro.Entity {
 			case Item.Use.NULL:
 				break;
 			case Item.Use.USE_HEALTH:
+				if(Health >= maxHealth) {
+					SoundManager.PLAY_STATIONARY_SOUND("Nope");
+					return;
+				}
 				Heal(currentItem.heal);
+				SoundManager.PLAY_STATIONARY_SOUND("Item");
+				inventory.removeSelection();
 				break;
 			default:
 				itemTime = 0;
@@ -188,7 +195,7 @@ public class Player : Retro.Entity {
 	}
 
 	public void pickupItem(Item item, int[] slot) {
-		if(slot[1] == 0) inventory.setItem(slot[0], item.ID);
+		if(slot[1] == 0) inventory.setItem(slot[0], item.getName());
 		else inventory.setCraftingItem(slot[0], item);
 
 		SoundManager.PLAY_STATIONARY_SOUND("Pick");
