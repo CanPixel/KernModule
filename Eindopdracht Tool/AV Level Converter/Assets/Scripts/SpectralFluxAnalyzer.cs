@@ -19,12 +19,6 @@ namespace AlgorithmicBeatDetection {
 
         private bool spectrumThreaded;
 
-        public float Duration {
-            get {
-                return audioClip.length;
-            }
-            set { }
-        }
         public Dictionary<float, float> VolumePeaks {
             get {
                 Dictionary<float, float> tmp = null;
