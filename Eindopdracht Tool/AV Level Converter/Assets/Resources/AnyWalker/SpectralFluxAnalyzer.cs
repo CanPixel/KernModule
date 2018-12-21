@@ -75,7 +75,7 @@ namespace AlgorithmicBeatDetection {
                         combinedChannelAverage = 0f;
                     }
                 }
-                //Debug.Log("Sample Rate: " + preProcessedSamples.Length);
+                Debug.Log("Sample Rate: " + preProcessedSamples.Length);
 
                 // Once we have our audio sample data prepared, we can execute an FFT to return the spectrum data over the time domain
                 int spectrumSampleSize = 1024;

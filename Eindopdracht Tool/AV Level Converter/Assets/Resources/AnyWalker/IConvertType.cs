@@ -13,7 +13,7 @@ public class IConvert {
 	
 	/* THE IMPORTED TYPE CONVERSIONS */
 	/*To add more file type conversions, simply include the implementation of the IConvertType interface and the respective file extension as a string */
-	public static IConvertType[] types = new IConvertType[]{new ITXT(), new IMP3(),  new IBMP(), new IWAV()};//, new IJPG(), new IOGG(), new IPNG(), new IGIF()};
+	public static IConvertType[] types = new IConvertType[]{new IJPG(), new ITXT(), new IMP3(),  new IBMP()}; //new IWAV(), new IOGG(), new IBMP()};
 
 	static IConvert() {
 		foreach(IConvertType conv in types) FILETYPES.Add(conv.extension.ToLower(), conv);
@@ -45,7 +45,7 @@ public interface IConvertType {
 		get;
 		set;
 	}
-	GameObject Convert(string path, object[] vars, AnyWalker.GameType type);
+	GameObject Convert(string path, object[] vars);
 }
 
 public abstract class IConversionBaseType : IConvertType {
@@ -70,8 +70,8 @@ public abstract class IConversionBaseType : IConvertType {
 		//Text File Icon
 		for(int x = 0; x < tex.width; x++)
 			for(int y = 0; y < tex.height; y++) {
-				tex.SetPixel(x, y, AnyWalker.col_egg);
-				for(int i = 0; i < 5; i++) tex.SetPixel(x, (tex.height / 2) + (int)(Mathf.Sin(x*x*10)*3+(tex.width/(x+1)*100)) - i + 1, AnyWalker.col_semiblack);
+				tex.SetPixel(x, y, Generator.col_egg);
+				for(int i = 0; i < 5; i++) tex.SetPixel(x, (tex.height / 2) + (int)(Mathf.Sin(x*x*10)*3+(tex.width/(x+1)*100)) - i + 1, Generator.col_semiblack);
 				for(int i = 0; i < 2; i++) tex.SetPixel(x, (tex.height / 2) + (int)(Mathf.Sin(x*x*10)+(tex.width/(x+1)*100)) - i - 1, Color.black);
 			}
 		tex.Apply();
@@ -83,10 +83,10 @@ public abstract class IConversionBaseType : IConvertType {
 		//Text File Icon
 		for(int x = 0; x < tex.width; x++)
 			for(int y = 0; y < tex.height; y++) {
-				tex.SetPixel(x, y, AnyWalker.col_egg);
+				tex.SetPixel(x, y, Generator.col_egg);
 				if(x > 25 && x < tex.width - 10 && y > 10 && y < tex.height - 10 && y % 5 == 0) {
-						tex.SetPixel(x, y, AnyWalker.col_semiblack);
-						tex.SetPixel(x, y + 1, AnyWalker.col_semiblack);
+						tex.SetPixel(x, y, Generator.col_semiblack);
+						tex.SetPixel(x, y + 1, Generator.col_semiblack);
 				}
 				if(x < 30 && y > tex.height - 15) tex.SetPixel(x, y, Color.clear);
 				if(x < 15) tex.SetPixel(x, y, Color.clear);
@@ -96,13 +96,13 @@ public abstract class IConversionBaseType : IConvertType {
 		tex.filterMode = FilterMode.Point;
 	}
 	
-	public GameObject Convert(string path, object[] vars, AnyWalker.GameType type) {
+	public GameObject Convert(string path, object[] vars) {
 		for(int i = 0; i < vars.Length; i++) settings[variables[i].name] = vars[i];
-		return Convert(path, type);
+		return Convert(path);
 	}
 
-	public virtual GameObject Convert(string path, AnyWalker.GameType type) {
-		return AnyWalker.Self.parent;
+	public virtual GameObject Convert(string path) {
+		return Generator.Self.parent;
 	}
 }
 
@@ -123,7 +123,7 @@ public class IJPG : IConversionBaseType {
 		set {}
 	}
 
-    public override GameObject Convert(string path, AnyWalker.GameType type) {
+    public override GameObject Convert(string path) {
 		/* Texture2D tex = Texture2D.whiteTexture;
 		WWW www = new WWW(path);
 		www.LoadImageIntoTexture(tex);
@@ -131,9 +131,9 @@ public class IJPG : IConversionBaseType {
 		for(int x = 0; x < tex.width; x++)
 			for(int y = 0; y < tex.height; y++) {
 				Color col = tex.GetPixel(x, y);
-				if(col.r > 0 && col.g > 0 && col.b > 0) AnyWalker.CreateCube(new Vector3(x, y, 0));
+				if(col.r > 0 && col.g > 0 && col.b > 0) Generator.CreateCube(new Vector3(x, y, 0));
 			}*/
-			return AnyWalker.Self.parent;
+			return Generator.Self.parent;
 	}
 }
 public class IBMP : IConversionBaseType {
@@ -141,9 +141,9 @@ public class IBMP : IConversionBaseType {
 		get {
 			List<Setting> dict = new List<Setting>();
 			dict.Add(new Setting("Step", 5, new object[]{0, 100}));
-			dict.Add(new Setting("Amplitude", 1f, new object[]{1f, 10f}));
+			dict.Add(new Setting("Amplitude", 5f, new object[]{0f, 1f}));
 			dict.Add(new Setting("Randomiziation", true, new object[]{"Yes", "No"}));
-			dict.Add(new Setting("Seed", "saduifbdausi"));
+			dict.Add(new Setting("Seed", "randomStringWillGoHere"));
 			return dict;}
 		set {}
 	}
@@ -153,59 +153,7 @@ public class IBMP : IConversionBaseType {
 		set {}
 	}
 
-	protected void GenerateMesh(Texture2D tex) {
-		List<Vector3[]> verts = new List<Vector3[]>();
-		List<int> tris = new List<int>();
-		List<Vector2> uvs = new List<Vector2>();
-
-		int spacing = 50;
-		for(int x = 0; x < tex.width; x++) {
-			verts.Add(new Vector3[tex.width]);
-			for(int y = 0; y < tex.height; y++) {
-				Vector3 currentPoint = new Vector3();
-				currentPoint.x = (x * spacing) - tex.width / 2;
-				currentPoint.z = y * spacing - tex.height / 2;
-				int offset = y % 2;
-				if(offset == 1) currentPoint.x -= spacing * 0.5f;
-
-				Color col = tex.GetPixel(x, y);
-				if(col.r > 0 && col.g > 0 && col.b > 0) currentPoint.y = -spacing*(float)settings["Amplitude"];
-				else currentPoint.y = 0;
-
-				verts[x][y] = currentPoint;
-				uvs.Add(new Vector2(x, y));
-				if(x == 0 || y == 0) continue;
-				tris.Add(tex.width * x + y);
-				tris.Add(tex.width * x + (y - 1));
-				tris.Add(tex.width * (x - 1) + (y - 1));
-				tris.Add(tex.width * (x - 1) + (y - 1));
-				tris.Add(tex.width * (x - 1) + y);
-				tris.Add(tex.width * x + y);
-
-				int curX = x + (1-offset);
-				if(curX - 1 <= 0 || y <= 0 || curX >= tex.width) continue;
-			}
-		}
-
-		Vector3[] unfoldedVerts = new Vector3[tex.width*tex.width];
-		int i = 0;
-		foreach(Vector3[] v in verts) {
-			v.CopyTo(unfoldedVerts, i * tex.width);
-			i++;
-		}
-
-		Mesh mesh = new Mesh();
-		mesh.vertices = unfoldedVerts;
-		mesh.triangles = tris.ToArray();
-		mesh.uv = uvs.ToArray();
-
-		mesh.RecalculateBounds();
-		mesh.RecalculateTangents();
-		mesh.RecalculateNormals();
-		AnyWalker.BindMesh(mesh);
-	} 
-
-    public override GameObject Convert(string path, AnyWalker.GameType type) {
+    public override GameObject Convert(string path) {
 		if(File.Exists(path)) {
 			Texture2D tex;
 			byte[] fileData = File.ReadAllBytes(path);
@@ -216,24 +164,15 @@ public class IBMP : IConversionBaseType {
 
 			sizeToApply = new Vector3(tex.width, tex.height, 0);
 
-			switch(type) {
-				case AnyWalker.GameType.Landscape:
-						GenerateMesh(tex);
-					break;
-				case AnyWalker.GameType.Layered:
-					for(int x = 0; x < tex.width; x++)
-						for(int y = 0; y < tex.height; y++) {
-							Color col = tex.GetPixel(x, y);
-							if(col.r > 0 && col.g > 0 && col.b > 0) AnyWalker.CreateCube(new Vector3(x, y, 0));
-						}
-					break;
-				default:
-					break;
-			}
+			for(int x = 0; x < tex.width; x++)
+				for(int y = 0; y < tex.height; y++) {
+					Color col = tex.GetPixel(x, y);
+					if(col.r > 0 && col.g > 0 && col.b > 0) Generator.CreateCube(new Vector3(x, y, 0));
+				}
 			file = def = tex;
 			tex.filterMode = FilterMode.Point;
 		}
-		return AnyWalker.Self.parent;
+		return Generator.Self.parent;
 	}
 }
 
@@ -254,18 +193,11 @@ public class ITXT : IConversionBaseType {
 		set {}
 	}
 
-    public override GameObject Convert(string path, AnyWalker.GameType type) {
+    public override GameObject Convert(string path) {
 		if(File.Exists(path)) {
 			GenerateTextIcon();
 
-			string fileData;
-			try {
-				fileData = File.ReadAllText(path);
-			} catch(IOException) {
-				Debug.LogError("File in use!");
-				return null;
-			}
-
+			string fileData = File.ReadAllText(path);
 			string[] words = fileData.Replace('.', ' ').Replace(',', ' ').Trim().Split(' ');
 			List<int> map = new List<int>();
 			foreach(string i in words) {
@@ -284,28 +216,23 @@ public class ITXT : IConversionBaseType {
 			int size = map.Count - fl;
 			int width = (int)Mathf.Sqrt(size);
 			int height = width;
-			
-			//Size Cap
-			const int CAP = 50;
-			width = Mathf.Clamp(width, width, CAP);
-			height = Mathf.Clamp(height, height, CAP);
-
 			for(int x = 0; x < width; x++)
 				for(int y = 0; y < height; y++) {
 					float amplitude = (float)settings["Amplitude"];
 					int current = (int)(map[x * y] * amplitude);
-					AnyWalker.CreateCube(new Vector3(x/(float)settings["Density"], y/(float)settings["Density"], current));
+					Generator.CreateCube(new Vector3(x/(float)settings["Density"], y/(float)settings["Density"], current));
 				}
 		}
-		return AnyWalker.Self.parent;
+		return Generator.Self.parent;
 	}
 }
- 
+
+/* 
 public class IWAV : IConversionBaseType {
 		public override List<Setting> variables {
 		get {
 			List<Setting> dict = new List<Setting>();
-			dict.Add(new Setting("Amplitude", 1f, new object[]{1f, 10f}));
+			dict.Add(new Setting("Low-Frequency Peaks", 5f, new object[]{0f, 10f}));
 			dict.Add(new Setting("Mid-Frequency Peaks", 5f, new object[]{0f, 10f}));
 			dict.Add(new Setting("High-Frequency Peaks", 5f, new object[]{0f, 10f}));
 			dict.Add(new Setting("Length", 5, new object[]{1, 100}));
@@ -313,42 +240,47 @@ public class IWAV : IConversionBaseType {
 		set {}
 	}
 
+	private delegate void Callback(AudioClip www);
+	public void doneLoading(AudioClip www){
+		SongInfo songInfo =  new AnalyzeManager().GetSongInfo(www);
+		Debug.Log(songInfo);
+		foreach(var item in songInfo.highFreqPeaks) {
+			Debug.Log(item);
+			Generator.CreateCube(new Vector3(item.Key,item.Value, 0));
+		}
+	}
+
 	public override string extension {
 		get {return "wav";}
 		set {}
 	}
 
-	public void doneLoading(SongInfo songInfo) {
-		for(int width = 0; width < songInfo.GetDataLength(); width++) {
-			const int CAP = 500;
-			int count = 0;
-			foreach(var item in songInfo.GetData(width)) {
-				AnyWalker.CreateCube(new Vector3(width, item.time, -item.prunedSpectralFlux*(float)settings["Amplitude"]), new Vector3(1, 20, 20));
-				count++;
-				if(count > CAP) break;
-			}
-		}
-	} 
-
-	public override GameObject Convert(string path, AnyWalker.GameType type) {
+	private IEnumerator loadAudio(string path, Callback whendone) {
 		using (UnityWebRequest www = UnityWebRequestMultimedia.GetAudioClip(path, AudioType.WAV)) {
-			www.SendWebRequest();
-			while(!www.isDone) ;
-			if(www.isNetworkError || www.isHttpError) Debug.LogError(www.error);
-			else if(www.downloadHandler.isDone) {
-				AudioClip clip = DownloadHandlerAudioClip.GetContent(www);
-				new AnalyzeManager().GetSongInfo(clip, doneLoading);
+			yield return www.Send();
+			if(www.isNetworkError) Debug.LogError(www.error);
+			else {
+				AudioClip cl = DownloadHandlerAudioClip.GetContent(www);
+				whendone(cl);
 			}
 		}
-		return AnyWalker.Self.parent;
 	}
-}
+
+	public override GameObject Convert(string path) {
+		//Generator.coroutineHandler.StartCoroutine(loadAudio(path, doneLoading));
+
+		//for(float i = 0; i < songInfo.duration; i += 0.1f) {
+
+		//}
+		return Generator.Self.parent;
+	}
+}*/
 
 public class IMP3 : IConversionBaseType {
 		public override List<Setting> variables {
 		get {
 			List<Setting> dict = new List<Setting>();
-			dict.Add(new Setting("Amplitude", 1f, new object[]{1f, 10f}));
+			dict.Add(new Setting("Low-Frequency Peaks", 5f, new object[]{0f, 10f}));
 			dict.Add(new Setting("Mid-Frequency Peaks", 5f, new object[]{0f, 10f}));
 			dict.Add(new Setting("High-Frequency Peaks", 5f, new object[]{0f, 10f}));
 			dict.Add(new Setting("Length", 5, new object[]{1, 100}));
@@ -361,39 +293,27 @@ public class IMP3 : IConversionBaseType {
 		set {}
 	}
 
+	private delegate void Callback(SongInfo www);
 	public void doneLoading(SongInfo songInfo) {
 		for(int width = 0; width < songInfo.GetDataLength(); width++) {
-			foreach(var item in songInfo.GetData(width)) AnyWalker.CreateCube(new Vector3(width, item.time, -item.prunedSpectralFlux), new Vector3(1, 20, 20));
+			foreach(var item in songInfo.GetData(width)) Generator.CreateCube(new Vector3(width, item.time, -item.prunedSpectralFlux), new Vector3(1, 20, 20));
 		}
 	} 
 
-	private float[] ConvertByteToFloat(byte[] array) {
-		float[] floatArr = new float[array.Length / 4];
-		for(int i = 0; i < floatArr.Length; i += 2) {
-			if(System.BitConverter.IsLittleEndian) System.Array.Reverse(array, i * 4, 4);
-			floatArr[i] = (float)(System.BitConverter.ToInt16(array, i * 2) / 8000 * ((float)settings["Amplitude"]));
-		}
-		return floatArr;
-	}
-
-	public override GameObject Convert(string path, AnyWalker.GameType type) {
+	public override GameObject Convert(string path) {
 		GenerateAudioIcon();
-		
-		byte[] file = File.ReadAllBytes(path);
-		float[] data = ConvertByteToFloat(file);
-		AudioClip clip = AudioClip.Create("FlurryHurry", data.Length, 1, 44100, false);
-		clip.SetData(data, 0);
-
-		new AnalyzeManager().GetSongInfo(clip, doneLoading);
-		return AnyWalker.Self.parent;
+		//AudioClip ad = new AudioClip();
+		new AnalyzeManager().GetSongInfo(Resources.Load("FlurryHurry") as AudioClip, doneLoading);
+		return Generator.Self.parent;
 	}
 }
 
+/* 
 public class IOGG : IConversionBaseType {
 		public override List<Setting> variables {
 		get {
 			List<Setting> dict = new List<Setting>();
-			dict.Add(new Setting("Amplitude", 1f, new object[]{1f, 10f}));
+			dict.Add(new Setting("Low-Frequency Peaks", 5f, new object[]{0f, 10f}));
 			dict.Add(new Setting("Mid-Frequency Peaks", 5f, new object[]{0f, 10f}));
 			dict.Add(new Setting("High-Frequency Peaks", 5f, new object[]{0f, 10f}));
 			dict.Add(new Setting("Length", 5, new object[]{1, 100}));
@@ -406,28 +326,32 @@ public class IOGG : IConversionBaseType {
 		set {}
 	}
 
-	public void doneLoading(SongInfo songInfo) {
-		for(int width = 0; width < songInfo.GetDataLength(); width++) {
-			const int CAP = 500;
-			int count = 0;
-			foreach(var item in songInfo.GetData(width)) {
-				AnyWalker.CreateCube(new Vector3(width, item.time, -item.prunedSpectralFlux*(float)settings["Amplitude"]), new Vector3(1, 20, 20));
-				count++;
-				if(count > CAP) break;
-			}
+	private delegate void Callback(AudioClip www);
+	public void doneLoading(AudioClip www){
+		SongInfo songInfo =  new AnalyzeManager().GetSongInfo(www);
+		Debug.Log("Stap 4 jullie verdienen koffie");
+		foreach(var item in songInfo.highFreqPeaks) {
+			Debug.Log("Wees maar blij at this point");
+			Generator.CreateCube(new Vector3(item.Key,item.Value, 0));
 		}
-	} 
-
-	public override GameObject Convert(string path, AnyWalker.GameType type) {
-		using (UnityWebRequest www = UnityWebRequestMultimedia.GetAudioClip(path, AudioType.OGGVORBIS)) {
-			www.SendWebRequest();
-			while(!www.isDone) ;
-			if(www.isNetworkError || www.isHttpError) Debug.LogError(www.error);
-			else if(www.downloadHandler.isDone) {
-				AudioClip clip = DownloadHandlerAudioClip.GetContent(www);
-				new AnalyzeManager().GetSongInfo(clip, doneLoading);
-			}
-		}
-		return AnyWalker.Self.parent;
 	}
-}
+
+	private IEnumerator loadAudio(string path, Callback whendone) {
+		using (UnityWebRequest www = UnityWebRequestMultimedia.GetAudioClip(path, AudioType.OGGVORBIS)) {
+			Debug.Log("Stap 2 soortvan ish gehaald");
+			yield return www.Send();
+			if(www.isNetworkError) Debug.LogError(www.error);
+			else {
+				AudioClip cl = DownloadHandlerAudioClip.GetContent(www);
+				Debug.Log("Stap 3 het is soortvan gelukt");
+				whendone(cl);
+			}
+		}
+	}
+
+	public override GameObject Convert(string path) {
+		Debug.Log("Stap 1 gehaald");
+		Generator.coroutineHandler.StartCoroutine(loadAudio(path, doneLoading));
+		return Generator.Self.parent;
+	}
+}*/
