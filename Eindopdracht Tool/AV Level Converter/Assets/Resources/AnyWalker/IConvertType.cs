@@ -41,6 +41,8 @@ public interface IConvertType {
 
 	Vector3 size {set;get;}
 
+	void SetSettings(AnyWalker.GameType gt);
+
 	string extension {
 		get;
 		set;
@@ -49,18 +51,28 @@ public interface IConvertType {
 }
 
 public abstract class IConversionBaseType : IConvertType {
-	public abstract List<Setting> variables {get;set;}
-
+	public List<Setting> dict = new List<Setting>();
+	public virtual List<Setting> variables {
+		get {return dict;}
+		set {
+			dict = value;
+			UpdateSettings();}
+	}
 	protected Dictionary<string, object> settings = new Dictionary<string, object>();
 
 	protected Vector3 sizeToApply = Vector3.zero;
-	public Vector3 size {set{}
+	public Vector3 size {set{sizeToApply = value;}
 		get{return sizeToApply;}
 	}
 
 	protected System.Object def = null;
 	public System.Object file {set{}
 		get{return def;}
+	}
+
+	public void UpdateSettings() {
+		settings.Clear();
+		for(int i = 0; i < variables.Count; i++) settings.Add(variables[i].name, variables[i].value);
 	}
 
 	public abstract string extension {get;set;}
@@ -104,23 +116,34 @@ public abstract class IConversionBaseType : IConvertType {
 	public virtual GameObject Convert(string path, AnyWalker.GameType type) {
 		return AnyWalker.Self.parent;
 	}
+
+	public virtual void SetSettings(AnyWalker.GameType gt) {}
 }
 
 public class IJPG : IConversionBaseType {
-	public override List<Setting> variables {
-		get {
-			List<Setting> dict = new List<Setting>();
-			dict.Add(new Setting("Step", 5, new object[]{0, 100}));
-			dict.Add(new Setting("Amplitude", 5f, new object[]{0f, 1f}));
-			dict.Add(new Setting("Randomiziation", true, new object[]{"Yes", "No"}));
-			dict.Add(new Setting("Seed", "randomStringWillGoHere"));
-			return dict;}
-		set {}
-	}
-
 	public override string extension {
 		get {return "JPG";}
 		set {}
+	}
+
+	override public void SetSettings(AnyWalker.GameType type) {
+		variables.Clear();
+		List<Setting> dict = new List<Setting>();
+		switch(type) {
+				case AnyWalker.GameType.Landscape:
+					dict.Add(new Setting("Step", 5, new object[]{0, 100}));
+					dict.Add(new Setting("Amplitude", 1f, new object[]{1f, 1f}));
+					dict.Add(new Setting("Randomiziation", true, new object[]{"Yes", "No"}));
+					dict.Add(new Setting("Seed", "randomStringWillGoHere"));
+					break;
+				case AnyWalker.GameType.Layered:
+					dict.Add(new Setting("Step", 5, new object[]{0, 100}));
+					dict.Add(new Setting("Wall Height", 1f, new object[]{1f, 10f}));
+					dict.Add(new Setting("Randomiziation", true, new object[]{"Yes", "No"}));
+					dict.Add(new Setting("Seed", "saduifbdausi"));
+					break;
+		}
+		variables = dict;
 	}
 
     public override GameObject Convert(string path, AnyWalker.GameType type) {
@@ -137,15 +160,30 @@ public class IJPG : IConversionBaseType {
 	}
 }
 public class IBMP : IConversionBaseType {
-	public override List<Setting> variables {
-		get {
-			List<Setting> dict = new List<Setting>();
-			dict.Add(new Setting("Step", 5, new object[]{0, 100}));
-			dict.Add(new Setting("Amplitude", 1f, new object[]{1f, 10f}));
-			dict.Add(new Setting("Randomiziation", true, new object[]{"Yes", "No"}));
-			dict.Add(new Setting("Seed", "saduifbdausi"));
-			return dict;}
-		set {}
+	override public void SetSettings(AnyWalker.GameType type) {
+		variables.Clear();
+		List<Setting> dict = new List<Setting>();
+		switch(type) {
+				case AnyWalker.GameType.Landscape:
+					dict.Add(new Setting("Noise", 0f, new object[]{0f, 5f}));
+					dict.Add(new Setting("Amplitude", 1f, new object[]{1f, 10f}));
+					dict.Add(new Setting("Colors", new AnyWalker.TerrainType(), new object[]{3}));
+					dict.Add(new Setting("Smoothing", FilterMode.Point, new object[]{FilterMode.Point, FilterMode.Bilinear, FilterMode.Trilinear}));
+					break;
+				case AnyWalker.GameType.Runner:
+					dict.Add(new Setting("Sample Size", 1, new object[]{1, 5}));
+					dict.Add(new Setting("Wall Height", 1f, new object[]{1f, 10f}));
+					dict.Add(new Setting("Density", 1f, new object[]{1f, 3f}));
+					dict.Add(new Setting("Bump", 0.5f, new object[]{0f, 5f}));
+					break;
+				case AnyWalker.GameType.Layered:
+					dict.Add(new Setting("Sample Size", 1, new object[]{1, 5}));
+					dict.Add(new Setting("Wall Height", 1f, new object[]{1f, 10f}));
+					dict.Add(new Setting("Density", 1f, new object[]{1f, 3f}));
+					dict.Add(new Setting("Bump", 0.5f, new object[]{0f, 5f}));
+					break;
+		}
+		variables = dict;
 	}
 
 	public override string extension {
@@ -158,7 +196,9 @@ public class IBMP : IConversionBaseType {
 		List<int> tris = new List<int>();
 		List<Vector2> uvs = new List<Vector2>();
 
+		AnyWalker.TerrainType type = ((AnyWalker.TerrainType)settings["Colors"]);
 		int spacing = 50;
+		
 		for(int x = 0; x < tex.width; x++) {
 			verts.Add(new Vector3[tex.width]);
 			for(int y = 0; y < tex.height; y++) {
@@ -169,7 +209,7 @@ public class IBMP : IConversionBaseType {
 				if(offset == 1) currentPoint.x -= spacing * 0.5f;
 
 				Color col = tex.GetPixel(x, y);
-				if(col.r > 0 && col.g > 0 && col.b > 0) currentPoint.y = -spacing*(float)settings["Amplitude"];
+				if(col.r > 0 && col.g > 0 && col.b > 0) currentPoint.y = -spacing * (float)settings["Amplitude"];
 				else currentPoint.y = 0;
 
 				verts[x][y] = currentPoint;
@@ -186,13 +226,74 @@ public class IBMP : IConversionBaseType {
 				if(curX - 1 <= 0 || y <= 0 || curX >= tex.width) continue;
 			}
 		}
-
+	
+		//Copy verts into 1D array
 		Vector3[] unfoldedVerts = new Vector3[tex.width*tex.width];
 		int i = 0;
 		foreach(Vector3[] v in verts) {
 			v.CopyTo(unfoldedVerts, i * tex.width);
 			i++;
 		}
+
+		//Apply settings to 1D array
+		for(int v = 0; v < unfoldedVerts.Length; v++) {
+			Vector3 vx = unfoldedVerts[v];
+			float fin = (float)settings["Noise"]* 10 * Mathf.PerlinNoise(vx.x / tex.width, vx.z / tex.height)*5;
+			unfoldedVerts[v] = new Vector3(vx.x, vx.y + fin, vx.z);
+		}
+
+		Color[,] colorMap = new Color[tex.width, tex.height];
+		int lowest = 0;
+		float max = 0, min = 0;
+		for(int v = 0; v < unfoldedVerts.Length; v++) {
+			if(type.colors.Count > 0) {
+				Vector3 currentPoint = unfoldedVerts[v];
+				float fin = currentPoint.y;
+				for(int l = 0; l < type.colors.Count; l++)  {
+					if(l > 0 && type.heights[l] < type.heights[l - 1]) lowest = l;
+					if(max < fin) max = fin;
+					if(min > fin) min = fin;
+				}
+			}
+		}
+	for(int x = 0; x < tex.width; x++) 
+		for(int y = 0; y < tex.height; y++) {
+				Vector3 currentPoint = verts[x][y];
+				currentPoint.x = (x * spacing) - tex.width / 2;
+				currentPoint.z = (y * spacing) - tex.height / 2;
+				int offset = y % 2;
+				if(offset == 1) currentPoint.x -= spacing * 0.5f;
+
+				Color col = tex.GetPixel(x, y);
+				if(col.r > 0 && col.g > 0 && col.b > 0) currentPoint.y = -spacing * (float)settings["Amplitude"];
+				else currentPoint.y = 0;
+
+				float noise = (float)settings["Noise"]* 10 * Mathf.PerlinNoise(currentPoint.x / tex.width, currentPoint.z / tex.height)*5;
+				float fin = currentPoint.y + noise;
+				float f = (fin - min) / (max - min);
+				for(int l = 0; l < type.colors.Count; l++)  {
+					try {
+						if(f <= type.heights[l]) {
+							colorMap[x, y] = type.colors[l];
+							break;
+						}
+						else colorMap[x, y] = type.colors[lowest];
+					}
+					catch(System.IndexOutOfRangeException) {}
+				}
+		}
+
+		//Color map to Texture2D
+		Color[] colMap = new Color[tex.width * tex.height];
+		for(int j = 0; j < colorMap.GetLength(1); j++)
+			for(int m = 0; m < colorMap.GetLength(0); m++) {
+				colMap[j*colorMap.GetLength(1)+m] = colorMap[m, j];
+			}
+		Texture2D Colored = new Texture2D(tex.width, tex.height);
+		Colored.filterMode = (FilterMode)settings["Smoothing"];
+		Colored.wrapMode = TextureWrapMode.Clamp;
+		Colored.SetPixels(colMap);
+		Colored.Apply();
 
 		Mesh mesh = new Mesh();
 		mesh.vertices = unfoldedVerts;
@@ -202,8 +303,29 @@ public class IBMP : IConversionBaseType {
 		mesh.RecalculateBounds();
 		mesh.RecalculateTangents();
 		mesh.RecalculateNormals();
-		AnyWalker.BindMesh(mesh);
+		AnyWalker.BindMesh(mesh, Colored, spacing);
 	} 
+	protected void GenerateLayers(Texture2D tex) {
+		int sample =  (int)settings["Sample Size"];
+		for(int x = 0; x < tex.width / sample; x++)
+			for(int y = 0; y < tex.height / sample; y++) {
+				Color col = tex.GetPixel(x * sample, y * sample);
+				if(col.r > 0 && col.g > 0 && col.b > 0) AnyWalker.CreateCube(new Vector3(x*(float)settings["Density"], y*(float)settings["Density"], Random.Range(0f, (float)settings["Bump"])));
+				else for(int i = 0; i < (float)settings["Wall Height"]; i++) AnyWalker.CreateCube(new Vector3(x*(float)settings["Density"], y*(float)settings["Density"], -i), Vector3.one, 1);
+			}
+		size = new Vector3(tex.width/sample, 0, tex.height/sample);
+	}
+
+	protected void GenerateRunner(Texture2D tex) {
+		int sample =  (int)settings["Sample Size"];
+		for(int x = 0; x < tex.width / sample; x++)
+			for(int y = 0; y < tex.height / sample; y++) {
+				Color col = tex.GetPixel(x * sample, y * sample);
+				if(col.r > 0 && col.g > 0 && col.b > 0) AnyWalker.CreateCube(new Vector3(x * (float)settings["Density"] + y * (float)settings["Density"], 0, Random.Range(0f, (float)settings["Bump"])));
+				else for(int i = 0; i < (float)settings["Wall Height"] + 1; i++) AnyWalker.CreateCube(new Vector3(x * (float)settings["Density"] + y * (float)settings["Density"], i, 0), Vector3.one, 1);
+			}
+		size = new Vector3(tex.width / sample, 0, tex.height / sample);
+	}
 
     public override GameObject Convert(string path, AnyWalker.GameType type) {
 		if(File.Exists(path)) {
@@ -213,19 +335,17 @@ public class IBMP : IConversionBaseType {
 			BMPLoader bmp = new BMPLoader();
 			BMPImage bmpImg = bmp.LoadBMP(fileData);
 			tex = bmpImg.ToTexture2D();
-
 			sizeToApply = new Vector3(tex.width, tex.height, 0);
 
 			switch(type) {
 				case AnyWalker.GameType.Landscape:
-						GenerateMesh(tex);
+					GenerateMesh(tex);
 					break;
 				case AnyWalker.GameType.Layered:
-					for(int x = 0; x < tex.width; x++)
-						for(int y = 0; y < tex.height; y++) {
-							Color col = tex.GetPixel(x, y);
-							if(col.r > 0 && col.g > 0 && col.b > 0) AnyWalker.CreateCube(new Vector3(x, y, 0));
-						}
+					GenerateLayers(tex);
+					break;
+				case AnyWalker.GameType.Runner:
+					GenerateRunner(tex);
 					break;
 				default:
 					break;
@@ -238,20 +358,29 @@ public class IBMP : IConversionBaseType {
 }
 
 public class ITXT : IConversionBaseType {
-	public override List<Setting> variables {
-		get {
-			List<Setting> dict = new List<Setting>();
-			dict.Add(new Setting("Density", 0.5f, new object[]{0f, 1f}));
-			dict.Add(new Setting("Scale", 5f, new object[]{0f, 1f}));
-			dict.Add(new Setting("Amplitude", 1f, new object[]{0.1f, 4f}));
-			dict.Add(new Setting("Randomiziation", true, new object[]{"Yes", "No"}));
-			return dict;}
-		set {}
-	}
-
 	public override string extension {
 		get {return "txt";}
 		set {}
+	}
+
+	override public void SetSettings(AnyWalker.GameType type) {
+		variables.Clear();
+		List<Setting> dict = new List<Setting>();
+		switch(type) {
+				case AnyWalker.GameType.Landscape:
+					dict.Add(new Setting("Density", 0.5f, new object[]{0f, 1f}));
+					dict.Add(new Setting("Scale", 5f, new object[]{0f, 1f}));
+					dict.Add(new Setting("Amplitude", 1f, new object[]{0.1f, 4f}));
+					dict.Add(new Setting("Randomiziation", true, new object[]{"Yes", "No"}));
+					break;
+				case AnyWalker.GameType.Layered:
+					dict.Add(new Setting("Density", 0.5f, new object[]{0f, 1f}));
+					dict.Add(new Setting("Scale", 5f, new object[]{0f, 1f}));
+					dict.Add(new Setting("Amplitude", 1f, new object[]{0.1f, 4f}));
+					dict.Add(new Setting("Randomiziation", true, new object[]{"Yes", "No"}));
+					break;
+		}
+		variables = dict;
 	}
 
     public override GameObject Convert(string path, AnyWalker.GameType type) {
@@ -302,15 +431,24 @@ public class ITXT : IConversionBaseType {
 }
  
 public class IWAV : IConversionBaseType {
-		public override List<Setting> variables {
-		get {
-			List<Setting> dict = new List<Setting>();
-			dict.Add(new Setting("Amplitude", 1f, new object[]{1f, 10f}));
-			dict.Add(new Setting("Mid-Frequency Peaks", 5f, new object[]{0f, 10f}));
-			dict.Add(new Setting("High-Frequency Peaks", 5f, new object[]{0f, 10f}));
-			dict.Add(new Setting("Length", 5, new object[]{1, 100}));
-			return dict;}
-		set {}
+	override public void SetSettings(AnyWalker.GameType type) {
+		variables.Clear();
+		List<Setting> dict = new List<Setting>();
+		switch(type) {
+				case AnyWalker.GameType.Landscape:
+					dict.Add(new Setting("Amplitude", 1f, new object[]{1f, 10f}));
+					dict.Add(new Setting("Mid-Frequency Peaks", 5f, new object[]{0f, 10f}));
+					dict.Add(new Setting("High-Frequency Peaks", 5f, new object[]{0f, 10f}));
+					dict.Add(new Setting("Length", 5, new object[]{1, 100}));
+					break;
+				case AnyWalker.GameType.Layered:
+					dict.Add(new Setting("Amplitude", 1f, new object[]{1f, 10f}));
+					dict.Add(new Setting("Mid-Frequency Peaks", 5f, new object[]{0f, 10f}));
+					dict.Add(new Setting("High-Frequency Peaks", 5f, new object[]{0f, 10f}));
+					dict.Add(new Setting("Length", 5, new object[]{1, 100}));
+					break;
+		}
+		variables = dict;
 	}
 
 	public override string extension {
@@ -345,15 +483,24 @@ public class IWAV : IConversionBaseType {
 }
 
 public class IMP3 : IConversionBaseType {
-		public override List<Setting> variables {
-		get {
-			List<Setting> dict = new List<Setting>();
-			dict.Add(new Setting("Amplitude", 1f, new object[]{1f, 10f}));
-			dict.Add(new Setting("Mid-Frequency Peaks", 5f, new object[]{0f, 10f}));
-			dict.Add(new Setting("High-Frequency Peaks", 5f, new object[]{0f, 10f}));
-			dict.Add(new Setting("Length", 5, new object[]{1, 100}));
-			return dict;}
-		set {}
+	override public void SetSettings(AnyWalker.GameType type) {
+		variables.Clear();
+		List<Setting> dict = new List<Setting>();
+		switch(type) {
+				case AnyWalker.GameType.Landscape:
+					dict.Add(new Setting("Amplitude", 1f, new object[]{1f, 10f}));
+					dict.Add(new Setting("Mid-Frequency Peaks", 5f, new object[]{0f, 10f}));
+					dict.Add(new Setting("High-Frequency Peaks", 5f, new object[]{0f, 10f}));
+					dict.Add(new Setting("Length", 5, new object[]{1, 100}));
+					break;
+				case AnyWalker.GameType.Layered:
+					dict.Add(new Setting("Amplitude", 1f, new object[]{1f, 10f}));
+					dict.Add(new Setting("Mid-Frequency Peaks", 5f, new object[]{0f, 10f}));
+					dict.Add(new Setting("High-Frequency Peaks", 5f, new object[]{0f, 10f}));
+					dict.Add(new Setting("Length", 5, new object[]{1, 100}));
+					break;
+		}
+		variables = dict;
 	}
 
 	public override string extension {
@@ -390,15 +537,24 @@ public class IMP3 : IConversionBaseType {
 }
 
 public class IOGG : IConversionBaseType {
-		public override List<Setting> variables {
-		get {
-			List<Setting> dict = new List<Setting>();
-			dict.Add(new Setting("Amplitude", 1f, new object[]{1f, 10f}));
-			dict.Add(new Setting("Mid-Frequency Peaks", 5f, new object[]{0f, 10f}));
-			dict.Add(new Setting("High-Frequency Peaks", 5f, new object[]{0f, 10f}));
-			dict.Add(new Setting("Length", 5, new object[]{1, 100}));
-			return dict;}
-		set {}
+	override public void SetSettings(AnyWalker.GameType type) {
+		variables.Clear();
+		List<Setting> dict = new List<Setting>();
+		switch(type) {
+				case AnyWalker.GameType.Landscape:
+					dict.Add(new Setting("Amplitude", 1f, new object[]{1f, 10f}));
+					dict.Add(new Setting("Mid-Frequency Peaks", 5f, new object[]{0f, 10f}));
+					dict.Add(new Setting("High-Frequency Peaks", 5f, new object[]{0f, 10f}));
+					dict.Add(new Setting("Length", 5, new object[]{1, 100}));
+					break;
+				case AnyWalker.GameType.Layered:
+					dict.Add(new Setting("Amplitude", 1f, new object[]{1f, 10f}));
+					dict.Add(new Setting("Mid-Frequency Peaks", 5f, new object[]{0f, 10f}));
+					dict.Add(new Setting("High-Frequency Peaks", 5f, new object[]{0f, 10f}));
+					dict.Add(new Setting("Length", 5, new object[]{1, 100}));
+					break;
+		}
+		variables = dict;
 	}
 
 	public override string extension {

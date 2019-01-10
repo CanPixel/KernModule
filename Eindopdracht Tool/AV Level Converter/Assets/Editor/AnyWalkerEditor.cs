@@ -75,6 +75,7 @@ public class AnyWalkerEditor : Editor {
 
 		//Styling
 		GUIContent content = new GUIContent();
+		GUIStyle oldLabel = EditorStyles.boldLabel;
 		GUIStyle style = new GUIStyle(GUI.skin.button), 
 		labelstyle = EditorStyles.boldLabel, 
 		generateButton = new GUIStyle(GUI.skin.button), 
@@ -82,7 +83,7 @@ public class AnyWalkerEditor : Editor {
 		resetButton = new GUIStyle(GUI.skin.button);
 
 		style.imagePosition = ImagePosition.ImageLeft;
-		style.fixedHeight = style.fixedWidth = 32;
+		style.fixedHeight = style.fixedWidth = 45;
 		elementBtn.fontStyle = FontStyle.Bold;
 		resetButton.fontStyle = FontStyle.Bold;
 		elementBtn.onActive.textColor = col_egg;
@@ -96,6 +97,7 @@ public class AnyWalkerEditor : Editor {
 		labelstyle.normal.textColor = col_egg;
 		labelstyle.alignment = TextAnchor.MiddleLeft;
 		labelstyle.fontStyle = FontStyle.Bold;
+		labelstyle.fontSize = 14;
 
 		//Load Icons
 		folderIcon = Resources.Load(TOOL_NAME + "/Folder") as Texture;
@@ -109,7 +111,7 @@ public class AnyWalkerEditor : Editor {
 		GUI.backgroundColor = col_black;
 		GUILayout.BeginHorizontal("box");
 		GUI.backgroundColor = col_egg;
-		if(GUILayout.Button(content,style)) 
+		if(GUILayout.Button(content, style)) 
 		{
 			path = EditorUtility.OpenFolderPanel("Select directory", "", "");
 			currentDir = new DirectoryInfo(path);
@@ -120,15 +122,21 @@ public class AnyWalkerEditor : Editor {
 		GUI.backgroundColor = Color.white;
 
 		if(path.Length <= 1) {
-			buttonName = "Load Directory\n <--";
+			buttonName = "Load Directory";
 			hasDirectory = false;
 		} else {
-			buttonName = "Directory loaded: \n" + Simplify(path);
+			buttonName = "Directory loaded:";
 			hasDirectory = true;
 		}
 
+		GUILayout.BeginVertical();
 		GUILayout.Box(buttonName, labelstyle);
-
+		int oldSize = labelstyle.fontSize;
+		labelstyle.fontSize = 10;
+		if(hasDirectory) GUILayout.Label(Simplify(path), labelstyle);
+		else GUILayout.Label("<--", labelstyle);
+		labelstyle.fontSize = oldSize;
+		GUILayout.EndVertical();
 		GUI.backgroundColor = col_egg;
 		if(GUILayout.Button("Reset", elementBtn, GUILayout.Width(50))) {
 			path = "";
@@ -142,7 +150,7 @@ public class AnyWalkerEditor : Editor {
 		if(hasDirectory) {
 			GUILayout.BeginVertical("Box");
 			FileInfo[] files = GetFileList();
-			fileTypeScroll = GUILayout.BeginScrollView(fileTypeScroll, false, true, GUILayout.Height(200));
+			fileTypeScroll = GUILayout.BeginScrollView(fileTypeScroll, false, true, GUIStyle.none, GUI.skin.verticalScrollbar, GUILayout.Height(200));
 			for(int i = 0; i < files.Length; i++) {
 				if(save.file == files[i].Name) {
 					GUI.backgroundColor = col_semiblack;
@@ -157,8 +165,10 @@ public class AnyWalkerEditor : Editor {
 
 				if(!hasConversionMethod(files[i].Extension)) GUI.backgroundColor = col_blank;
 
-				GUILayout.BeginHorizontal("box", GUILayout.Width(Screen.width-175));
-				if(GUILayout.Button(files[i].Name.Split('.')[0], labelstyle)) {
+				GUILayout.BeginHorizontal("box", GUILayout.Width(Screen.width / 1.5f));
+				string name = files[i].Name.Split('.')[0];
+				if(name.Length > 24) name = name.Substring(0, 24) + "...";
+				if(GUILayout.Button(name, labelstyle)) {
 					if(hasConversionMethod(files[i].Extension)) {
 						save.file = files[i].Name;
 						ScanFileType();
@@ -177,10 +187,12 @@ public class AnyWalkerEditor : Editor {
 					labelstyle.normal.textColor = col_egg;
 				}
 				if(!hasConversionMethod(files[i].Extension)) GUI.backgroundColor = col_red;
+
 				GUILayout.BeginHorizontal("box", GUILayout.Width(40));
-					labelstyle.alignment = TextAnchor.MiddleCenter;
-					GUILayout.Box(files[i].Extension.ToUpper().Substring(1), labelstyle);
+				labelstyle.alignment = TextAnchor.MiddleCenter;
+				GUILayout.Box(files[i].Extension.ToUpper().Substring(1), labelstyle);
 				GUILayout.EndHorizontal();
+
 				labelstyle.fontSize = labelSize;
 				labelstyle.alignment = oldAlignment;
 				labelstyle.fontStyle = oldStyle;
@@ -198,26 +210,27 @@ public class AnyWalkerEditor : Editor {
 
 		//GameType Generation Presets
 		if(hasDirectory) {
+			GUIStyle gameTypeBtn = elementBtn;
+			gameTypeBtn.imagePosition = ImagePosition.ImageAbove;
+			gameTypeBtn.fixedHeight = 105;
+			gameTypeBtn.fixedWidth = 150;
+			gameTypeBtn.padding = new RectOffset(0, 0, 10, 5);
+
 			GUILayout.Space(10);
 			GUI.backgroundColor = col_semiblack;
-			GUILayout.BeginVertical("Box");
+			GUILayout.BeginVertical("Box", GUILayout.Height(gameTypeBtn.fixedHeight + 50));
 			GUILayout.Label("Game Type", EditorStyles.boldLabel);
 			string[] names = new string[AnyWalker.AMOUNT_GAMEMODES()];
 			for(int i = 0; i < names.Length; i++) names[i] = ((AnyWalker.GameType[])System.Enum.GetValues(typeof(AnyWalker.GameType)))[i].ToString().Replace('_', ' ');
 
 			GUI.backgroundColor = col_egg;
-			GUIStyle gameTypeBtn = elementBtn;
-			gameTypeBtn.imagePosition = ImagePosition.ImageAbove;
-			gameTypeBtn.fixedHeight = style.fixedWidth = 100;
-			gameTypeBtn.padding = new RectOffset(0, 0, 5, 5);
-			
 			//IMAGES LOADING
 			GUIContent[] contents = new GUIContent[AnyWalker.AMOUNT_GAMEMODES()];
 			for(int i = 0; i < contents.Length; i++) {
 				contents[i] = new GUIContent();
 				Texture2D img = Resources.Load(TOOL_NAME + "/" + names[i].Replace(" ", "")) as Texture2D;
 				//Complexity
-				int complexity = (int)(((i+1) / (float)contents.Length)*3);
+				int complexity = (int)(((i + 1) / (float)contents.Length) * 3);
 				int baseX = img.width / 3 * 2, baseY = img.height / 3 * 2;
 				Color col = col_egg;
 				if(complexity == 2) col = col_blank;
@@ -230,16 +243,20 @@ public class AnyWalkerEditor : Editor {
 					else col = baseCol;
 					for(int mX = 0; mX < si; mX++)
 						for(int mY = 0; mY < si; mY++) {
-							img.SetPixel(baseX + mX + (c*si/4), baseY + mY + (c*si/4), col);
-							img.SetPixel(baseX + mX + (si/8) + (c*si/4), baseY + (si/8) + mY + (c*si/4), col_semiblack);
+							img.SetPixel(baseX + mX + (c * si / 4), baseY + mY + (c * si / 4), col);
+							img.SetPixel(baseX + mX + (si / 8) + (c * si / 4), baseY + (si / 8) + mY + (c * si / 4), col_semiblack);
 						}
 				}
 				img.Apply();
 				contents[i].image = img;
 				contents[i].text = names[i];
 			}
-			gameTypeScroll = EditorGUILayout.BeginScrollView(gameTypeScroll, true, false);
-			save.mode = GUILayout.SelectionGrid(save.mode, contents, names.Length, gameTypeBtn, GUILayout.Width(400));
+			//Horizontal Scrolling
+			Vector2 scroll = new Vector2(0, 0);
+			if(Event.current.isScrollWheel) scroll = new Vector2(Event.current.delta.y * 10, 0);
+			gameTypeScroll = GUILayout.BeginScrollView(gameTypeScroll + scroll, true, false, GUI.skin.horizontalScrollbar, GUIStyle.none);
+
+			save.mode = GUILayout.SelectionGrid(save.mode, contents, names.Length, gameTypeBtn);
 			EditorGUILayout.EndScrollView();
 
 			GUILayout.EndVertical();
@@ -263,6 +280,7 @@ public class AnyWalkerEditor : Editor {
 			GUILayout.Space(5);
 		}
 		labelstyle.normal.textColor = Color.black;
+		labelstyle = oldLabel;
 	}
 
 	public FileInfo[] GetFileList() {
@@ -277,7 +295,6 @@ public class AnyWalkerEditor : Editor {
 		}
 		return files.ToArray();
 	}
-
 	public bool hasConversionMethod(string ext) {
 		string extension = ext.Replace('.', ' ').ToLower().Trim();
 		try {
@@ -287,7 +304,6 @@ public class AnyWalkerEditor : Editor {
 		catch(KeyNotFoundException){}
 		return false;
 	}
-
 	public IConvertType ScanFileType() {
 		DirectoryInfo currentFile = new DirectoryInfo(save.dir + "/" + save.file);
 		string extension = currentFile.Extension.Replace('.', ' ').ToLower().Trim();
@@ -298,7 +314,6 @@ public class AnyWalkerEditor : Editor {
 		catch(KeyNotFoundException){}
 		return null;
 	}
-
 	public string Simplify(string path) {
 		string[] splits = path.Split('/');
 		string[] data = Application.dataPath.Split('/');
@@ -343,6 +358,7 @@ public class Preview : EditorWindow {
 		preview.tar = target;
 		preview.genEdit = genEdit;
 		preview.settings = genEdit.ScanFileType();
+		preview.settings.SetSettings(AnyWalker.GET_GAMEMODE(preview.genEdit.save.mode));
 
 		//Base Material
 		Material mat = Resources.Load(AnyWalkerEditor.TOOL_NAME + "/PreviewCube") as Material;
@@ -420,6 +436,36 @@ public class Preview : EditorWindow {
 			}
 			else if(values[i].GetType() == typeof(string)) {
 				values[i] = GUILayout.TextField((string)values[i], elementWidth, GUILayout.Height(elementY / 2));
+				GUILayout.Space(15);
+			}
+			else if(values[i].GetType() == typeof(Color)) {
+				values[i] = EditorGUILayout.ColorField((Color)values[i], GUILayout.Width(elementX / 1.6f), GUILayout.Height(elementY / 2));
+			}
+			//Color array
+			else if(values[i].GetType() == typeof(AnyWalker.TerrainType)) {
+				GUILayout.BeginHorizontal();
+				AnyWalker.TerrainType cast = (AnyWalker.TerrainType)values[i];
+				int count = (int)settings.variables[i].options[0];
+				cast.Synchronize(count);
+				for(int v = 0; v < count; v++) {
+					GUILayout.BeginVertical();
+					cast.colors[v] = EditorGUILayout.ColorField(cast.colors[v], GUILayout.Width(elementX / 2f), GUILayout.Height(elementY / 2));
+					cast.heights[v] = EditorGUILayout.FloatField(cast.heights[v], GUILayout.Width(elementX / 2.8f), GUILayout.Height(elementY / 2));
+					GUILayout.EndVertical();
+				}
+				GUILayout.EndHorizontal();
+			}
+			else if(values[i].GetType() == typeof(FilterMode)) {
+				int selected = 0;
+				if((FilterMode)values[i] == FilterMode.Point) selected = 0;
+				else if((FilterMode)values[i] == FilterMode.Bilinear) selected = 1;
+				else selected = 2;
+				string[] names = {"Low", "Medium", "High"};
+				selected = EditorGUILayout.Popup(selected, names, GUILayout.Width(elementX / 2));
+				if(selected == 0) values[i] = FilterMode.Point;
+				else if(selected == 1) values[i] = FilterMode.Bilinear;
+				else values[i] = FilterMode.Trilinear;
+
 				GUILayout.Space(15);
 			}
 			GUILayout.EndVertical();

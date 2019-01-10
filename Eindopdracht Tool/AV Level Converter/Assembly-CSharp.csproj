@@ -55,10 +55,10 @@
   <ItemGroup>
      <Compile Include="Assets\Resources\AnyWalker\AnyWalker.cs" />
      <Compile Include="Assets\Resources\AnyWalker\IConvertType.cs" />
+     <Compile Include="Assets\Resources\AnyWalker\Lib\BMPLoader.cs" />
      <Compile Include="Assets\Resources\AnyWalker\Lib\DSPLib\DSPLib.cs" />
+     <Compile Include="Assets\Resources\AnyWalker\Lib\MP3Loader.cs" />
      <Compile Include="Assets\Resources\AnyWalker\Lib\NET\Complex.cs" />
-     <Compile Include="Assets\Resources\AnyWalker\Loader.cs" />
-     <Compile Include="Assets\Resources\AnyWalker\SpectralFluxAnalyzer.cs" />
      <Compile Include="Assets\SampleScenes\Menu\Scripts\MenuSceneLoader.cs" />
      <Compile Include="Assets\SampleScenes\Menu\Scripts\PauseMenu.cs" />
      <Compile Include="Assets\SampleScenes\Menu\Scripts\SceneAndURLLoader.cs" />
