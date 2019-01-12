@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEditor;
+using System.Reflection;
 
 public class AnyWalker : MonoBehaviour {
 	[System.Serializable]
@@ -101,6 +102,13 @@ public class AnyWalker : MonoBehaviour {
 		mesh.sharedMaterial.mainTexture = tex;
 		mesh.sharedMaterial.mainTextureScale = new Vector2(tex.width / 4000f, tex.height / 4000f);
 		MeshCollider col = level.AddComponent<MeshCollider>();
+	}
+
+	public static void ClearConsole() {
+		var assembly = Assembly.GetAssembly(typeof(SceneView));
+		var type = assembly.GetType("UnityEditor.LogEntries");
+		var method = type.GetMethod("Clear");
+		method.Invoke(new object(), null);
 	}
 
 	public static int AMOUNT_GAMEMODES() {

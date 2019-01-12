@@ -349,7 +349,6 @@ public class Preview : EditorWindow {
 
 	private IConvertType settings;
 	private object[] values;
-	private bool collapse = false;
 	private GUIStyle bgCol;
 
 	public static Preview Create(Vector2 size, AnyWalker target, AnyWalkerEditor genEdit) {

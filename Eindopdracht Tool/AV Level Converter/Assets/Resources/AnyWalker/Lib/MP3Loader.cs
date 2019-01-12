@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
-
 using System.Numerics;
 using DSPLib;
 
@@ -12,7 +11,6 @@ namespace AlgorithmicBeatDetection {
         int numChannels;
         int numTotalSamples;
         int sampleRate;
-        float clipLength;
         float[] multiChannelSamples;
         SpectralFluxAnalyzer SpectralFluxAnalyzer;
 
@@ -25,12 +23,14 @@ namespace AlgorithmicBeatDetection {
         private void StartAnalyze(AudioClip aud, SongInfo songInfo, Callback func) {
             SpectralFluxAnalyzer = new SpectralFluxAnalyzer();
 
+            AnyWalker.ClearConsole();
+
             // Need all audio samples.  If in stereo, samples will return with left and right channels interweaved
             // [L,R,L,R,L,R]
-            multiChannelSamples = new float[aud.samples * aud.channels];
             numChannels = aud.channels;
-            numTotalSamples = aud.samples;
-            clipLength = aud.length;
+            numTotalSamples = Mathf.Clamp(aud.samples, 1, 500000); //Cap for too big audio files, otherwise loading takes too long
+            multiChannelSamples = new float[numTotalSamples * numChannels];
+            Debug.LogWarning("Starting Spectrum Analysis with " + numTotalSamples + " samples.");
 
             // We are not evaluating the audio as it is being played by Unity, so we need the clip's sampling rate
             this.sampleRate = aud.frequency;
@@ -38,12 +38,10 @@ namespace AlgorithmicBeatDetection {
             aud.GetData(multiChannelSamples, 0);
             doneAnalyzing = func;
 
-            //Thread bgThread = new Thread(getFullSpectrumThreaded);
-            //bgThread.Start()
-            getFullSpectrumThreaded();
+            GetFullSpectrum();
         }
 
-        public void finishAnalyzing(SongInfo songInfo) {
+        private void FinishAnalyze(SongInfo songInfo) {
             songInfo.SetData(SpectralFluxAnalyzer.GetData());
             doneLoading(songInfo);
         }
@@ -52,14 +50,14 @@ namespace AlgorithmicBeatDetection {
             songInfo = new SongInfo();
             doneLoading = done;
             songInfo.duration = aud.length;
-            StartAnalyze(aud, songInfo, finishAnalyzing);
+            StartAnalyze(aud, songInfo, FinishAnalyze);
         }
 
-        public float getTimeFromIndex(int index) {
+        public float GetTimeFromIndex(int index) {
             return ((1f / (float)this.sampleRate) * index);
         }
 
-        public void getFullSpectrumThreaded() {
+        private void GetFullSpectrum() {
                 // We only need to retain the samples for combined channels over the time domain
                 float[] preProcessedSamples = new float[this.numTotalSamples];
 
@@ -75,7 +73,6 @@ namespace AlgorithmicBeatDetection {
                         combinedChannelAverage = 0f;
                     }
                 }
-                //Debug.Log("Sample Rate: " + preProcessedSamples.Length);
 
                 // Once we have our audio sample data prepared, we can execute an FFT to return the spectrum data over the time domain
                 int spectrumSampleSize = 1024;
@@ -84,7 +81,6 @@ namespace AlgorithmicBeatDetection {
                 FFT fft = new FFT();
                 fft.Initialize((UInt32)spectrumSampleSize);
 
-               // Debug.Log(string.Format("Processing {0} time domain samples for FFT", iterations));
                 double[] sampleChunk = new double[spectrumSampleSize];
                 for (int i = 0; i < iterations; i++) {
                     // Grab the current 1024 chunk of audio sample data
@@ -101,13 +97,13 @@ namespace AlgorithmicBeatDetection {
                     scaledFFTSpectrum = DSP.Math.Multiply(scaledFFTSpectrum, scaleFactor);
 
                     // These 1024 magnitude values correspond (roughly) to a single point in the audio timeline
-                    float curSongTime = getTimeFromIndex(i) * spectrumSampleSize;
+                    float curSongTime = GetTimeFromIndex(i) * spectrumSampleSize;
 
                     // Send our magnitude data off to our Spectral Flux Analyzer to be analyzed for peaks
-                    SpectralFluxAnalyzer.analyzeSpectrum(Array.ConvertAll(scaledFFTSpectrum, x => (float)x), curSongTime, 0); //Analyze Bass
-                    SpectralFluxAnalyzer.analyzeSpectrum(Array.ConvertAll(scaledFFTSpectrum, x => (float)x), curSongTime, 1); //Analyze Mids
-                    SpectralFluxAnalyzer.analyzeSpectrum(Array.ConvertAll(scaledFFTSpectrum, x => (float)x), curSongTime, 2); //Analyze Highs
-                    SpectralFluxAnalyzer.analyzeSpectrum(Array.ConvertAll(scaledFFTSpectrum, x => (float)x), curSongTime, 3); //Analyze All
+                    SpectralFluxAnalyzer.AnalyzeSpectrum(Array.ConvertAll(scaledFFTSpectrum, x => (float)x), curSongTime, 0); //Analyze Bass
+                    SpectralFluxAnalyzer.AnalyzeSpectrum(Array.ConvertAll(scaledFFTSpectrum, x => (float)x), curSongTime, 1); //Analyze Mids
+                    SpectralFluxAnalyzer.AnalyzeSpectrum(Array.ConvertAll(scaledFFTSpectrum, x => (float)x), curSongTime, 2); //Analyze Highs
+                    SpectralFluxAnalyzer.AnalyzeSpectrum(Array.ConvertAll(scaledFFTSpectrum, x => (float)x), curSongTime, 3); //Analyze All
                 }
 
                 Debug.LogWarning("Spectrum Analysis done");
@@ -117,7 +113,7 @@ namespace AlgorithmicBeatDetection {
     }
 
     public class SongInfo {
-        public float duration;
+        public float duration {get;set;}
 
         private List<SpectralFluxInfo> volumePeaks, lowFreqPeaks, midFreqPeaks, highFreqPeaks;
         private  List<List<SpectralFluxInfo>> data;
@@ -203,14 +199,14 @@ namespace AlgorithmicBeatDetection {
             prevSpectrum = new float[numSamples];
         }
 
-        public void setCurSpectrum(float[] spectrum) {
+        public void SetCurSpectrum(float[] spectrum) {
             curSpectrum.CopyTo(prevSpectrum, 0);
             spectrum.CopyTo(curSpectrum, 0);
         }
 
-        public void analyzeSpectrum(float[] spectrum, float time, int freqRange) {
+        public void AnalyzeSpectrum(float[] spectrum, float time, int freqRange) {
             // Set spectrum
-            setCurSpectrum(spectrum);
+            SetCurSpectrum(spectrum);
 
            // spectralFluxSamples.Clear();
             float freqRangeStart;
@@ -270,7 +266,7 @@ namespace AlgorithmicBeatDetection {
             else Debug.Log(string.Format("Not ready yet.  At spectral flux sample size of {0} growing to {1}", spectralFluxSamples.Count, thresholdWindowSize));
         }
 
-        float calculateRectifiedSpectralFlux(float freqRangeStart, float freqRangeEnd) {
+        protected float calculateRectifiedSpectralFlux(float freqRangeStart, float freqRangeEnd) {
             float hertzPerBin = (float)AudioSettings.outputSampleRate / 2f / numSamples;
             int targetStartIndex = Mathf.RoundToInt(freqRangeStart / hertzPerBin);
             int targetEndIndex = Mathf.RoundToInt(freqRangeEnd / hertzPerBin);
@@ -282,7 +278,7 @@ namespace AlgorithmicBeatDetection {
             return sum;
         }
 
-        float getFluxThreshold(int spectralFluxIndex) {
+        protected float getFluxThreshold(int spectralFluxIndex) {
             // How many samples in the past and future we include in our average
             int windowStartIndex = Mathf.Max(0, spectralFluxIndex - thresholdWindowSize / 2);
             int windowEndIndex = Mathf.Min(spectralFluxSamples.Count - 1, spectralFluxIndex + thresholdWindowSize / 2);
@@ -298,11 +294,11 @@ namespace AlgorithmicBeatDetection {
             return avg * thresholdMultiplier;
         }
 
-        float getPrunedSpectralFlux(int spectralFluxIndex) {
+        protected float getPrunedSpectralFlux(int spectralFluxIndex) {
             return Mathf.Max(0f, spectralFluxSamples[spectralFluxIndex].spectralFlux - spectralFluxSamples[spectralFluxIndex].threshold);
         }
 
-        bool isPeak(int spectralFluxIndex) {
+        protected bool isPeak(int spectralFluxIndex) {
             if (spectralFluxSamples[spectralFluxIndex].prunedSpectralFlux > spectralFluxSamples[spectralFluxIndex + 1].prunedSpectralFlux &&
                 spectralFluxSamples[spectralFluxIndex].prunedSpectralFlux > spectralFluxSamples[spectralFluxIndex - 1].prunedSpectralFlux) {
                 return true;
@@ -310,7 +306,7 @@ namespace AlgorithmicBeatDetection {
             else return false;
         }
 
-        void logSample(int indexToLog) {
+        protected void logSample(int indexToLog) {
             int windowStart = Mathf.Max(0, indexToLog - thresholdWindowSize / 2);
             int windowEnd = Mathf.Min(spectralFluxSamples.Count - 1, indexToLog + thresholdWindowSize / 2);
             Debug.Log(string.Format(

@@ -368,34 +368,165 @@ public class ITXT : IConversionBaseType {
 		List<Setting> dict = new List<Setting>();
 		switch(type) {
 				case AnyWalker.GameType.Landscape:
-					dict.Add(new Setting("Density", 0.5f, new object[]{0f, 1f}));
-					dict.Add(new Setting("Scale", 5f, new object[]{0f, 1f}));
-					dict.Add(new Setting("Amplitude", 1f, new object[]{0.1f, 4f}));
-					dict.Add(new Setting("Randomiziation", true, new object[]{"Yes", "No"}));
+					dict.Add(new Setting("Noise", 0f, new object[]{0f, 5f}));
+					dict.Add(new Setting("Amplitude", 1f, new object[]{1f, 10f}));
+					dict.Add(new Setting("Colors", new AnyWalker.TerrainType(), new object[]{3}));
+					dict.Add(new Setting("Smoothing", FilterMode.Point, new object[]{FilterMode.Point, FilterMode.Bilinear, FilterMode.Trilinear}));
 					break;
 				case AnyWalker.GameType.Layered:
 					dict.Add(new Setting("Density", 0.5f, new object[]{0f, 1f}));
-					dict.Add(new Setting("Scale", 5f, new object[]{0f, 1f}));
 					dict.Add(new Setting("Amplitude", 1f, new object[]{0.1f, 4f}));
-					dict.Add(new Setting("Randomiziation", true, new object[]{"Yes", "No"}));
+					break;
+			case AnyWalker.GameType.Runner:
+					dict.Add(new Setting("Density", 0.5f, new object[]{0f, 1f}));
+					dict.Add(new Setting("Amplitude", 1f, new object[]{0.1f, 4f}));
 					break;
 		}
 		variables = dict;
 	}
 
-    public override GameObject Convert(string path, AnyWalker.GameType type) {
-		if(File.Exists(path)) {
-			GenerateTextIcon();
-
-			string fileData;
-			try {
-				fileData = File.ReadAllText(path);
-			} catch(IOException) {
-				Debug.LogError("File in use!");
-				return null;
+	protected void GenerateMesh(string fileData) {
+		string[] words = fileData.Replace('.', ' ').Replace(',', ' ').Trim().Split(' ');
+		List<int> map = new List<int>();
+		foreach(string s in words) {
+			char[] ch = s.ToCharArray();
+			foreach(char c in ch) {
+				int value = (int)c;
+				int sum = 0;
+				while(value != 0) {
+					sum += value % 10;
+					value /= 10;
+				}
+				map.Add(sum);
 			}
+		}
+		int fl = Mathf.Min(words.Length / 2, words.Length - (words.Length / 2));
+		int size = map.Count - fl;
+		int width = (int)Mathf.Sqrt(size);
+		int height = width;
+		
+		//Size Cap
+		const int CAP = 50;
+		width = Mathf.Clamp(width, width, CAP);
+		height = Mathf.Clamp(height, height, CAP);
+		var tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
 
-			string[] words = fileData.Replace('.', ' ').Replace(',', ' ').Trim().Split(' ');
+		List<Vector3[]> verts = new List<Vector3[]>();
+		List<int> tris = new List<int>();
+		List<Vector2> uvs = new List<Vector2>();
+
+		AnyWalker.TerrainType type = ((AnyWalker.TerrainType)settings["Colors"]);
+		int spacing = 50;
+		
+		for(int x = 0; x < width; x++) {
+			verts.Add(new Vector3[width]);
+			for(int y = 0; y < height; y++) {
+				Vector3 currentPoint = new Vector3();
+				currentPoint.x = (x * spacing) - width / 2;
+				currentPoint.z = y * spacing - height / 2;
+				int offset = y % 2;
+				if(offset == 1) currentPoint.x -= spacing * 0.5f;
+
+				float amplitude = (float)settings["Amplitude"];
+				int current = (int)(map[x * y] * amplitude);
+				currentPoint.y = current * 2;
+
+				verts[x][y] = currentPoint;
+				uvs.Add(new Vector2(x, y));
+				if(x == 0 || y == 0) continue;
+				tris.Add(tex.width * x + y);
+				tris.Add(tex.width * x + (y - 1));
+				tris.Add(tex.width * (x - 1) + (y - 1));
+				tris.Add(tex.width * (x - 1) + (y - 1));
+				tris.Add(tex.width * (x - 1) + y);
+				tris.Add(tex.width * x + y);
+
+				int curX = x + (1-offset);
+				if(curX - 1 <= 0 || y <= 0 || curX >= tex.width) continue;
+			}
+		}
+	
+		//Copy verts into 1D array
+		Vector3[] unfoldedVerts = new Vector3[tex.width*tex.width];
+		int i = 0;
+		foreach(Vector3[] v in verts) {
+			v.CopyTo(unfoldedVerts, i * tex.width);
+			i++;
+		}
+
+		//Apply settings to 1D array
+		for(int v = 0; v < unfoldedVerts.Length; v++) {
+			Vector3 vx = unfoldedVerts[v];
+			float fin = (float)settings["Noise"]* 10 * Mathf.PerlinNoise(vx.x / tex.width, vx.z / tex.height)*5;
+			unfoldedVerts[v] = new Vector3(vx.x, vx.y + fin, vx.z);
+		}
+
+		Color[,] colorMap = new Color[tex.width, tex.height];
+		int lowest = 0;
+		float max = 0, min = 0;
+		for(int v = 0; v < unfoldedVerts.Length; v++) {
+			if(type.colors.Count > 0) {
+				Vector3 currentPoint = unfoldedVerts[v];
+				float fin = currentPoint.y;
+				for(int l = 0; l < type.colors.Count; l++)  {
+					if(l > 0 && type.heights[l] < type.heights[l - 1]) lowest = l;
+					if(max < fin) max = fin;
+					if(min > fin) min = fin;
+				}
+			}
+		}
+	for(int x = 0; x < tex.width; x++) 
+		for(int y = 0; y < tex.height; y++) {
+				Vector3 currentPoint = verts[x][y];
+				currentPoint.x = (x * spacing) - tex.width / 2;
+				currentPoint.z = (y * spacing) - tex.height / 2;
+				int offset = y % 2;
+				if(offset == 1) currentPoint.x -= spacing * 0.5f;
+
+				Color col = tex.GetPixel(x, y);
+				if(col.r > 0 && col.g > 0 && col.b > 0) currentPoint.y = -spacing * (float)settings["Amplitude"];
+				else currentPoint.y = 0;
+
+				float noise = (float)settings["Noise"]* 10 * Mathf.PerlinNoise(currentPoint.x / tex.width, currentPoint.z / tex.height)*5;
+				float fin = currentPoint.y + noise;
+				float f = (fin - min) / (max - min);
+				for(int l = 0; l < type.colors.Count; l++)  {
+					try {
+						if(f <= type.heights[l]) {
+							colorMap[x, y] = type.colors[l];
+							break;
+						}
+						else colorMap[x, y] = type.colors[lowest];
+					}
+					catch(System.IndexOutOfRangeException) {}
+				}
+		}
+
+		//Color map to Texture2D
+		Color[] colMap = new Color[tex.width * tex.height];
+		for(int j = 0; j < colorMap.GetLength(1); j++)
+			for(int m = 0; m < colorMap.GetLength(0); m++) {
+				colMap[j*colorMap.GetLength(1)+m] = colorMap[m, j];
+			}
+		Texture2D Colored = new Texture2D(tex.width, tex.height);
+		Colored.filterMode = (FilterMode)settings["Smoothing"];
+		Colored.wrapMode = TextureWrapMode.Clamp;
+		Colored.SetPixels(colMap);
+		Colored.Apply();
+
+		Mesh mesh = new Mesh();
+		mesh.vertices = unfoldedVerts;
+		mesh.triangles = tris.ToArray();
+		mesh.uv = uvs.ToArray();
+
+		mesh.RecalculateBounds();
+		mesh.RecalculateTangents();
+		mesh.RecalculateNormals();
+		AnyWalker.BindMesh(mesh, Colored, spacing);
+	} 
+
+	protected void GenerateLayers(string fileData) {
+		string[] words = fileData.Replace('.', ' ').Replace(',', ' ').Trim().Split(' ');
 			List<int> map = new List<int>();
 			foreach(string i in words) {
 				char[] ch = i.ToCharArray();
@@ -425,6 +556,33 @@ public class ITXT : IConversionBaseType {
 					int current = (int)(map[x * y] * amplitude);
 					AnyWalker.CreateCube(new Vector3(x/(float)settings["Density"], y/(float)settings["Density"], current));
 				}
+	}
+
+    public override GameObject Convert(string path, AnyWalker.GameType type) {
+		if(File.Exists(path)) {
+			GenerateTextIcon();
+
+			string fileData;
+			try {
+				fileData = File.ReadAllText(path);
+			} catch(IOException) {
+				Debug.LogError("File in use!");
+				return null;
+			}
+
+			switch(type) {
+				case AnyWalker.GameType.Landscape:
+					GenerateMesh(fileData);
+					break;
+				case AnyWalker.GameType.Layered:
+					GenerateLayers(fileData);
+					break;
+				case AnyWalker.GameType.Runner:
+					//GenerateRunner(fileData);
+					break;
+				default:
+					break;
+			}
 		}
 		return AnyWalker.Self.parent;
 	}
@@ -446,6 +604,9 @@ public class IWAV : IConversionBaseType {
 					dict.Add(new Setting("Mid-Frequency Peaks", 5f, new object[]{0f, 10f}));
 					dict.Add(new Setting("High-Frequency Peaks", 5f, new object[]{0f, 10f}));
 					dict.Add(new Setting("Length", 5, new object[]{1, 100}));
+					break;
+				case AnyWalker.GameType.Runner:
+					dict.Add(new Setting("Amplitude", 1f, new object[]{1f, 10f}));
 					break;
 		}
 		variables = dict;
@@ -474,6 +635,7 @@ public class IWAV : IConversionBaseType {
 			while(!www.isDone) ;
 			if(www.isNetworkError || www.isHttpError) Debug.LogError(www.error);
 			else if(www.downloadHandler.isDone) {
+				Debug.LogWarning("Fetching audio file...");
 				AudioClip clip = DownloadHandlerAudioClip.GetContent(www);
 				new AnalyzeManager().GetSongInfo(clip, doneLoading);
 			}
@@ -498,6 +660,9 @@ public class IMP3 : IConversionBaseType {
 					dict.Add(new Setting("Mid-Frequency Peaks", 5f, new object[]{0f, 10f}));
 					dict.Add(new Setting("High-Frequency Peaks", 5f, new object[]{0f, 10f}));
 					dict.Add(new Setting("Length", 5, new object[]{1, 100}));
+					break;
+				case AnyWalker.GameType.Runner:
+					dict.Add(new Setting("Amplitude", 1f, new object[]{1f, 10f}));
 					break;
 		}
 		variables = dict;

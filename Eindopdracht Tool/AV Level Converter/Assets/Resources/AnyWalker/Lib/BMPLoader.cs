@@ -4,10 +4,11 @@ using UnityEngine;
 using System;
 using System.IO;
 
-namespace Loader
-{
-    public enum BMPComressionMode : int
-    {
+//                          BMP Converter Script                               \\
+/* Fetched from https://pastebin.com/fykWMpuB */
+
+namespace Loader {
+    public enum BMPComressionMode : int {
         BI_RGB = 0x00,
         BI_RLE8 = 0x01,
         BI_RLE4 = 0x02,
@@ -19,24 +20,23 @@ namespace Loader
         BI_CMYK = 0x0B,
         BI_CMYKRLE8 = 0x0C,
         BI_CMYKRLE4 = 0x0D,
- 
     }
-    public struct BMPFileHeader
-    {
-        public ushort magic; // "BM"
+
+    public struct BMPFileHeader {
+        public ushort magic;
         public uint filesize;
         public uint reserved;
         public uint offset;
     }
-    public struct BitmapInfoHeader
-    {
+
+    public struct BitmapInfoHeader {
         public uint size;
         public int width;
         public int height;
-        public ushort nColorPlanes; // always 1
-        public ushort nBitsPerPixel; // [1,4,8,16,24,32]
+        public ushort nColorPlanes;
+        public ushort nBitsPerPixel;
         public BMPComressionMode compressionMethod;
-        public uint rawImageSize; // can be "0"
+        public uint rawImageSize;
         public int xPPM;
         public int yPPM;
         public uint nPaletteColors;
@@ -44,11 +44,9 @@ namespace Loader
  
         public int absWidth { get { return Mathf.Abs(width); } }
         public int absHeight { get { return Mathf.Abs(height); } }
- 
     }
  
-    public class BMPImage
-    {
+    public class BMPImage {
         public BMPFileHeader header;
         public BitmapInfoHeader info;
         public uint rMask = 0x00FF0000;
@@ -66,102 +64,76 @@ namespace Loader
         }
     }
  
- 
-    public class BMPLoader
-    {
-        const ushort MAGIC = 0x4D42; // "BM" little endian
+    public class BMPLoader {
+        const ushort MAGIC = 0x4D42; // little endian
         public bool ReadPaletteAlpha = false;
         public bool ForceAlphaReadWhenPossible = false;
  
-        public BMPImage LoadBMP(string aFileName)
-        {
+        public BMPImage LoadBMP(string aFileName) {
             using (var file = File.OpenRead(aFileName))
                 return LoadBMP(file);
         }
-        public BMPImage LoadBMP(byte[] aData)
-        {
+        public BMPImage LoadBMP(byte[] aData) {
             using (var stream = new MemoryStream(aData))
                 return LoadBMP(stream);
         }
  
-        public BMPImage LoadBMP(Stream aData)
-        {
+        public BMPImage LoadBMP(Stream aData) {
             using (var reader = new BinaryReader(aData))
                 return LoadBMP(reader);
  
         }
-        public BMPImage LoadBMP(BinaryReader aReader)
-        {
+        public BMPImage LoadBMP(BinaryReader aReader) {
             BMPImage bmp = new BMPImage();
-            if (!ReadFileHeader(aReader, ref bmp.header))
-            {
+            if (!ReadFileHeader(aReader, ref bmp.header)) {
                 Debug.LogError("Not a BMP file");
                 return null;
             }
-            if (!ReadInfoHeader(aReader, ref bmp.info))
-            {
+            if (!ReadInfoHeader(aReader, ref bmp.info)) {
                 Debug.LogError("Unsupported header format");
                 return null;
             }
-            if (   bmp.info.compressionMethod != BMPComressionMode.BI_RGB
+            if (bmp.info.compressionMethod != BMPComressionMode.BI_RGB
                 && bmp.info.compressionMethod != BMPComressionMode.BI_BITFIELDS
                 && bmp.info.compressionMethod != BMPComressionMode.BI_ALPHABITFIELDS
                 && bmp.info.compressionMethod != BMPComressionMode.BI_RLE4
-                && bmp.info.compressionMethod != BMPComressionMode.BI_RLE8
-                )
-            {
+                && bmp.info.compressionMethod != BMPComressionMode.BI_RLE8 ) {
                 Debug.LogError("Unsupported image format: "+ bmp.info.compressionMethod);
                 return null;
             }
             long offset = 14 + bmp.info.size;
             aReader.BaseStream.Seek(offset, SeekOrigin.Begin);
-            if (bmp.info.nBitsPerPixel < 24)
-            {
+            if (bmp.info.nBitsPerPixel < 24) {
                 bmp.rMask = 0x00007C00;
                 bmp.gMask = 0x000003E0;
                 bmp.bMask = 0x0000001F;
             }
  
-            if (bmp.info.compressionMethod == BMPComressionMode.BI_BITFIELDS || bmp.info.compressionMethod == BMPComressionMode.BI_ALPHABITFIELDS)
-            {
+            if (bmp.info.compressionMethod == BMPComressionMode.BI_BITFIELDS || bmp.info.compressionMethod == BMPComressionMode.BI_ALPHABITFIELDS) {
                 bmp.rMask = aReader.ReadUInt32();
                 bmp.gMask = aReader.ReadUInt32();
                 bmp.bMask = aReader.ReadUInt32();
             }
-            if (ForceAlphaReadWhenPossible)
-                bmp.aMask = GetMask(bmp.info.nBitsPerPixel) ^ (bmp.rMask | bmp.gMask | bmp.bMask);
- 
-            if (bmp.info.compressionMethod == BMPComressionMode.BI_ALPHABITFIELDS)
-                bmp.aMask = aReader.ReadUInt32();
- 
-            if (bmp.info.nPaletteColors > 0 || bmp.info.nBitsPerPixel <= 8)
-                bmp.palette = ReadPalette(aReader, bmp, ReadPaletteAlpha || ForceAlphaReadWhenPossible);
- 
+            if (ForceAlphaReadWhenPossible) bmp.aMask = GetMask(bmp.info.nBitsPerPixel) ^ (bmp.rMask | bmp.gMask | bmp.bMask);
+            if (bmp.info.compressionMethod == BMPComressionMode.BI_ALPHABITFIELDS) bmp.aMask = aReader.ReadUInt32();
+            if (bmp.info.nPaletteColors > 0 || bmp.info.nBitsPerPixel <= 8) bmp.palette = ReadPalette(aReader, bmp, ReadPaletteAlpha || ForceAlphaReadWhenPossible);
  
             aReader.BaseStream.Seek(bmp.header.offset, SeekOrigin.Begin);
             bool uncompressed = bmp.info.compressionMethod == BMPComressionMode.BI_RGB ||
                 bmp.info.compressionMethod == BMPComressionMode.BI_BITFIELDS ||
                 bmp.info.compressionMethod == BMPComressionMode.BI_ALPHABITFIELDS;
-            if (bmp.info.nBitsPerPixel == 32 && uncompressed)
-                Read32BitImage(aReader, bmp);
-            else if (bmp.info.nBitsPerPixel == 24 && uncompressed)
-                Read24BitImage(aReader, bmp);
-            else if (bmp.info.nBitsPerPixel == 16 && uncompressed)
-                Read16BitImage(aReader, bmp);
-            else if (bmp.info.compressionMethod == BMPComressionMode.BI_RLE4 && bmp.info.nBitsPerPixel == 4 && bmp.palette != null)
-                ReadIndexedImageRLE4(aReader, bmp);
-            else if (bmp.info.compressionMethod == BMPComressionMode.BI_RLE8 && bmp.info.nBitsPerPixel == 8 && bmp.palette != null)
-                ReadIndexedImageRLE8(aReader, bmp);
-            else if (uncompressed && bmp.info.nBitsPerPixel <= 8 && bmp.palette != null)
-                ReadIndexedImage(aReader, bmp);
-            else
-            {
+            if (bmp.info.nBitsPerPixel == 32 && uncompressed) Read32BitImage(aReader, bmp);
+            else if (bmp.info.nBitsPerPixel == 24 && uncompressed) Read24BitImage(aReader, bmp);
+            else if (bmp.info.nBitsPerPixel == 16 && uncompressed) Read16BitImage(aReader, bmp);
+            else if (bmp.info.compressionMethod == BMPComressionMode.BI_RLE4 && bmp.info.nBitsPerPixel == 4 && bmp.palette != null) ReadIndexedImageRLE4(aReader, bmp);
+            else if (bmp.info.compressionMethod == BMPComressionMode.BI_RLE8 && bmp.info.nBitsPerPixel == 8 && bmp.palette != null) ReadIndexedImageRLE8(aReader, bmp);
+            else if (uncompressed && bmp.info.nBitsPerPixel <= 8 && bmp.palette != null) ReadIndexedImage(aReader, bmp);
+            else {
                 Debug.LogError("Unsupported file format: " + bmp.info.compressionMethod + " BPP: " + bmp.info.nBitsPerPixel);
                 return null;
             }
             return bmp;
         }
- 
  
         private static void Read32BitImage(BinaryReader aReader, BMPImage bmp)
         {
@@ -189,7 +161,6 @@ namespace Loader
                 data[i] = new Color32(r,g,b,a);
             }
         }
- 
  
         private static void Read24BitImage(BinaryReader aReader, BMPImage bmp)
         {
